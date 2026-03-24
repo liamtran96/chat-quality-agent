@@ -103,6 +103,38 @@ docker compose pull
 docker compose up -d
 ```
 
+## Tự động cập nhật (tùy chọn)
+
+Thêm [Watchtower](https://containrrr.dev/watchtower/) để VPS tự động pull image mới và restart khi có bản cập nhật.
+
+Mở file `docker-compose.yml` trên VPS, thêm service:
+
+```yaml
+watchtower:
+  image: containrrr/watchtower
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  environment:
+    - WATCHTOWER_CLEANUP=true
+    - WATCHTOWER_POLL_INTERVAL=300
+  restart: unless-stopped
+```
+
+Chạy:
+
+```bash
+docker compose up -d watchtower
+```
+
+Watchtower sẽ kiểm tra Docker Hub mỗi 5 phút. Khi phát hiện image mới, tự pull và restart container app + nginx. Dữ liệu MySQL không bị ảnh hưởng.
+
+::: tip Xem log Watchtower
+```bash
+docker compose logs watchtower -f
+```
+Thấy dòng `Found new ...` nghĩa là đã tự cập nhật thành công.
+:::
+
 ## Gỡ cài đặt
 
 ```bash
