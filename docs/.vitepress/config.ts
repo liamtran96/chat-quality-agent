@@ -62,6 +62,7 @@ export default defineConfig({
         text: 'Hỗ trợ',
         items: [
           { text: 'FAQ & Xử lý lỗi', link: '/faq' },
+          { text: 'Changelog', link: '/changelog' },
         ],
       },
     ],
