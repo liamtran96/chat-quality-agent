@@ -209,27 +209,19 @@ oauth/access_token
 Khi dán vào Graph API Explorer, phải nối thành **1 dòng** (không có xuống hàng). Thay `{APP_ID}`, `{APP_SECRET}`, `{TOKEN_Ở_BƯỚC_2.3}` bằng giá trị thực.
 :::
 
-Click **Submit**. Kết quả trả về `access_token` mới — đây là Long-lived User Token (hạn ~60 ngày).
+Click **Submit**. Kết quả trả về `access_token` mới — đây là Long-lived User Token.
 
 ![Đổi token](/screenshots/facebook/Fb-fanpage-12.png)
-
-#### Bước 2.4c: Đổi thành Page Token vĩnh viễn
-
-1. Dán Long-lived User Token vào ô **Access Token**.
-2. Trong ô query, nhập: `me/accounts`
-3. Click **Submit**.
-
-Page Access Token trả về lần này là **token vĩnh viễn** (không hết hạn).
-
-::: tip Kiểm tra token
-Truy cập [Access Token Debugger](https://developers.facebook.com/tools/debug/accesstoken/), dán token vào và click **Debug**. Nếu dòng **Expires** hiện **"Never"**, token đã là vĩnh viễn.
-:::
 
 ### Bước 2.5: Nhập vào CQA
 
 Trong CQA, vào **Kênh chat** → **Kết nối kênh mới** → chọn **Facebook**:
 - **Page ID**: số `id` đã lấy ở Bước 2.3
-- **Page Access Token**: token vĩnh viễn đã lấy ở Bước 2.4c
+- **Page Access Token**: Long-lived Token đã lấy ở Bước 2.4b
+
+::: info CQA tự đổi sang Page Token
+Bạn chỉ cần nhập Long-lived User Token. CQA sẽ tự động gọi Facebook API để đổi sang Page Token vĩnh viễn và lưu lại. Không cần đổi thủ công.
+:::
 
 ![Nhập vào CQA](/screenshots/facebook/Fb-fanpage-13.png)
 
