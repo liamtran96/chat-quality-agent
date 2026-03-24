@@ -229,11 +229,22 @@ function goToMessages() {
 
 async function doSync() {
   syncing.value = true
+  syncResult.value = null
   try {
-    const result = await channelStore.syncChannel(tenantId.value, channelId.value)
-    syncResult.value = { type: 'success', message: `Đồng bộ thành công: ${result.conversations_synced || 0} cuộc chat, ${result.messages_synced || 0} tin nhắn` }
-    await channelStore.fetchChannel(tenantId.value, channelId.value)
+    await channelStore.syncChannel(tenantId.value, channelId.value)
+    // Poll channel status until sync completes
+    while (true) {
+      await new Promise(r => setTimeout(r, 3000))
+      const ch = await channelStore.fetchChannel(tenantId.value, channelId.value)
+      if (ch.last_sync_status !== 'syncing') break
+    }
     await channelStore.fetchSyncHistory(tenantId.value, channelId.value, syncPage.value)
+    const ch = channelStore.currentChannel
+    if (ch?.last_sync_status === 'success') {
+      syncResult.value = { type: 'success', message: 'Đồng bộ thành công' }
+    } else {
+      syncResult.value = { type: 'error', message: ch?.last_sync_error || 'Đồng bộ thất bại' }
+    }
   } catch (err: any) {
     syncResult.value = { type: 'error', message: err.response?.data?.error || 'Đồng bộ thất bại' }
   } finally {
@@ -312,6 +323,16 @@ watch(syncPage, (p) => {
 })
 
 onMounted(async () => {
+  // Handle OAuth callback redirect
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('zalo_auth') === 'success' || params.get('fb_auth') === 'success') {
+    syncResult.value = { type: 'success', message: 'Xác thực thành công! Bấm "Đồng bộ ngay" để lấy tin nhắn.' }
+    window.history.replaceState({}, '', window.location.pathname)
+  } else if (params.get('zalo_auth') === 'error' || params.get('fb_auth') === 'error') {
+    syncResult.value = { type: 'error', message: params.get('message') || 'Xác thực thất bại. Vui lòng thử lại.' }
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+
   await channelStore.fetchChannel(tenantId.value, channelId.value)
   await channelStore.fetchSyncHistory(tenantId.value, channelId.value, 1)
 })

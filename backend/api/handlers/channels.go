@@ -420,8 +420,8 @@ func ZaloOAuthCallback(c *gin.Context) {
 	}
 	db.DB.Model(&models.Channel{}).Where("id = ?", channelID).Updates(updates)
 
-	// Redirect back to channels page with success
-	c.Redirect(http.StatusFound, fmt.Sprintf("/%s/channels?zalo_auth=success", tenantID))
+	// Redirect back to channel detail page with success
+	c.Redirect(http.StatusFound, fmt.Sprintf("/%s/channels/%s?zalo_auth=success", tenantID, channelID))
 }
 
 type zaloTokenResponse struct {
@@ -593,35 +593,37 @@ func SyncChannelNow(c *gin.Context) {
 		return
 	}
 
-	cfg, _ := config.Load()
-	syncEng := engine.NewSyncEngine(cfg)
-
-	// Count before
-	var convsBefore, msgsBefore int64
-	db.DB.Model(&models.Conversation{}).Where("channel_id = ?", channelID).Count(&convsBefore)
-	db.DB.Model(&models.Message{}).Where("tenant_id = ? AND conversation_id IN (?)",
-		tenantID, db.DB.Model(&models.Conversation{}).Select("id").Where("channel_id = ?", channelID)).Count(&msgsBefore)
-
-	ctx := c.Request.Context()
-	if err := syncEng.SyncChannel(ctx, channel); err != nil {
-		log.Printf("[error] sync channel %s failed: %v", channelID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "sync_failed"})
-		return
-	}
-
-	// Count after
-	var convsAfter, msgsAfter int64
-	db.DB.Model(&models.Conversation{}).Where("channel_id = ?", channelID).Count(&convsAfter)
-	db.DB.Model(&models.Message{}).Where("tenant_id = ? AND conversation_id IN (?)",
-		tenantID, db.DB.Model(&models.Conversation{}).Select("id").Where("channel_id = ?", channelID)).Count(&msgsAfter)
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":                "ok",
-		"conversations_synced":  convsAfter - convsBefore,
-		"messages_synced":       msgsAfter - msgsBefore,
-		"total_conversations":   convsAfter,
-		"total_messages":        msgsAfter,
+	// Mark channel as syncing immediately
+	db.DB.Model(&channel).Updates(map[string]interface{}{
+		"last_sync_status": "syncing",
+		"last_sync_error":  "",
+		"updated_at":       time.Now(),
 	})
+
+	// Run sync in background to avoid Nginx/proxy gateway timeout
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[security] panic in sync goroutine for channel %s: %v", channel.Name, r)
+				db.DB.Model(&models.Channel{}).Where("id = ?", channelID).Updates(map[string]interface{}{
+					"last_sync_status": "error",
+					"last_sync_error":  fmt.Sprintf("panic: %v", r),
+					"updated_at":       time.Now(),
+				})
+			}
+		}()
+
+		cfg, _ := config.Load()
+		syncEng := engine.NewSyncEngine(cfg)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		if err := syncEng.SyncChannel(ctx, channel); err != nil {
+			log.Printf("[error] sync channel %s failed: %v", channelID, err)
+		}
+	}()
+
+	c.JSON(http.StatusAccepted, gin.H{"message": "sync_started"})
 }
 
 // FacebookOAuthCallback handles the OAuth callback from Facebook after user authorizes.
@@ -708,8 +710,8 @@ func FacebookOAuthCallback(c *gin.Context) {
 		"updated_at":            time.Now(),
 	})
 
-	// Redirect back to channels page with success
-	c.Redirect(http.StatusFound, fmt.Sprintf("/%s/channels?fb_auth=success", tenantID))
+	// Redirect back to channel detail page with success
+	c.Redirect(http.StatusFound, fmt.Sprintf("/%s/channels/%s?fb_auth=success", tenantID, channelID))
 }
 
 func exchangeFacebookCode(code, appID, appSecret, redirectURI string) (string, error) {
