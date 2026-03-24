@@ -1,24 +1,29 @@
 <template>
   <div>
     <!-- Header -->
-    <div class="d-flex align-center mb-2">
+    <div class="d-flex align-center mb-4">
       <v-btn icon="mdi-arrow-left" variant="text" size="small" :to="`/${tenantId}/jobs`" />
       <h1 class="text-subtitle-1 text-md-h5 font-weight-bold ml-1 flex-grow-1" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ job?.name || '...' }}</h1>
-      <v-btn variant="outlined" icon="mdi-pencil" size="small" :to="`/${tenantId}/jobs/${jobId}/edit`" class="ml-1" />
-      <v-btn variant="outlined" color="primary" icon="mdi-test-tube" size="small" :loading="testRunning" class="ml-1" @click="testRun" />
-      <v-btn color="primary" icon="mdi-play" size="small" :loading="triggerRunning" class="ml-1" @click="openRunDialog" />
-    </div>
-    <div v-if="job" class="d-flex flex-wrap ga-1 mb-3 ml-9">
-      <v-chip size="x-small" :color="job.job_type === 'qc_analysis' ? 'primary' : 'secondary'" variant="tonal">
-        {{ job.job_type === 'qc_analysis' ? $t('job_qc') : $t('job_classification') }}
-      </v-chip>
-      <v-chip size="x-small" variant="tonal">{{ job.ai_provider }} / {{ job.ai_model }}</v-chip>
-      <v-chip size="x-small" :color="job.is_active ? 'success' : 'grey'" variant="tonal">
-        {{ job.is_active ? $t('active') : $t('inactive') }}
-      </v-chip>
-      <v-chip size="x-small" variant="tonal" prepend-icon="mdi-clock-outline">
-        {{ formatSchedule(job.schedule_type, job.schedule_cron) }}
-      </v-chip>
+      <v-tooltip v-if="!mdAndUp" text="Sửa" location="bottom">
+        <template #activator="{ props }">
+          <v-btn v-bind="props" variant="outlined" icon="mdi-pencil" size="small" :to="`/${tenantId}/jobs/${jobId}/edit`" class="ml-1" />
+        </template>
+      </v-tooltip>
+      <v-btn v-else variant="outlined" prepend-icon="mdi-pencil" size="small" :to="`/${tenantId}/jobs/${jobId}/edit`" class="ml-2">{{ $t('edit') }}</v-btn>
+
+      <v-tooltip v-if="!mdAndUp" text="Chạy thử" location="bottom">
+        <template #activator="{ props }">
+          <v-btn v-bind="props" variant="outlined" color="primary" icon="mdi-test-tube" size="small" :loading="testRunning" class="ml-1" @click="testRun" />
+        </template>
+      </v-tooltip>
+      <v-btn v-else variant="outlined" color="primary" prepend-icon="mdi-test-tube" size="small" :loading="testRunning" class="ml-2" @click="testRun">Chạy thử (3 hội thoại)</v-btn>
+
+      <v-tooltip v-if="!mdAndUp" text="Chạy ngay" location="bottom">
+        <template #activator="{ props }">
+          <v-btn v-bind="props" color="primary" icon="mdi-play" size="small" :loading="triggerRunning" class="ml-1" @click="openRunDialog" />
+        </template>
+      </v-tooltip>
+      <v-btn v-else color="primary" prepend-icon="mdi-play" size="small" :loading="triggerRunning" class="ml-2" @click="openRunDialog">{{ $t('run_now') }}</v-btn>
     </div>
 
     <!-- Run options dialog -->
@@ -691,6 +696,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useDisplay } from 'vuetify'
 import { useJobStore, type JobResult } from '../../stores/jobs'
 import api from '../../api'
 import { Line } from 'vue-chartjs'
@@ -699,6 +705,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement,
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Filler, Legend)
 
 const route = useRoute()
+const { mdAndUp } = useDisplay()
 const jobStore = useJobStore()
 const tenantId = computed(() => route.params.tenantId as string)
 const jobId = computed(() => route.params.jobId as string)
