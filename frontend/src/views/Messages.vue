@@ -234,10 +234,11 @@
                       <div v-if="isImageAttachment(att)" class="mb-1">
                         <img
                           v-if="getAttachmentUrl(att)"
-                          :src="getAttachmentUrl(att)"
+                          :src="authImageUrls.get(getAttachmentUrl(att)) || ''"
                           style="max-width: 200px; max-height: 200px; border-radius: 8px; cursor: pointer;"
                           @click="openUrl(getAttachmentUrl(att))"
                           @error="onImageError($event, att)"
+                          :ref="(el: any) => loadAuthImage(getAttachmentUrl(att))"
                         />
                         <v-chip v-else size="x-small" variant="tonal" color="grey">
                           <v-icon start size="12">mdi-image</v-icon>
@@ -339,7 +340,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useConversationStore, type Message } from '../stores/conversations'
 import { useChannelStore } from '../stores/channels'
@@ -652,6 +653,36 @@ function getAttachmentUrl(att: any): string {
   if (att.local_path) return `/api/v1/files/${att.local_path}`
   return att.url || ''
 }
+
+// Auth image loading: fetch with JWT header, create blob URL
+const authImageUrls = reactive(new Map<string, string>())
+
+async function loadAuthImage(url: string) {
+  if (!url || authImageUrls.has(url)) return
+  // For external URLs (not /api/), load directly
+  if (!url.startsWith('/api/')) {
+    authImageUrls.set(url, url)
+    return
+  }
+  authImageUrls.set(url, '') // placeholder to prevent duplicate fetches
+  try {
+    const token = localStorage.getItem('cqa_access_token')
+    const resp = await fetch(url, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+    })
+    if (resp.ok) {
+      const blob = await resp.blob()
+      authImageUrls.set(url, URL.createObjectURL(blob))
+    }
+  } catch { /* ignore */ }
+}
+
+onUnmounted(() => {
+  // Cleanup blob URLs to prevent memory leaks
+  for (const blobUrl of authImageUrls.values()) {
+    if (blobUrl.startsWith('blob:')) URL.revokeObjectURL(blobUrl)
+  }
+})
 
 function isImageAttachment(att: any): boolean {
   return att.type && (att.type.startsWith('image') || att.type === 'image')
