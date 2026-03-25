@@ -232,11 +232,19 @@ async function doSync() {
   syncResult.value = null
   try {
     await channelStore.syncChannel(tenantId.value, channelId.value)
-    // Poll channel status until sync completes
-    while (true) {
+    // Poll channel status until sync completes (max 3 minutes)
+    let pollAttempts = 0
+    const maxPollAttempts = 60
+    while (pollAttempts < maxPollAttempts) {
       await new Promise(r => setTimeout(r, 3000))
       const ch = await channelStore.fetchChannel(tenantId.value, channelId.value)
       if (ch.last_sync_status !== 'syncing') break
+      pollAttempts++
+    }
+    if (pollAttempts >= maxPollAttempts) {
+      syncResult.value = { type: 'error', message: 'Đồng bộ quá lâu, vui lòng kiểm tra lại sau' }
+      syncing.value = false
+      return
     }
     await channelStore.fetchSyncHistory(tenantId.value, channelId.value, syncPage.value)
     const ch = channelStore.currentChannel
