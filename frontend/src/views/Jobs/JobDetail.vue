@@ -14,17 +14,17 @@
 
         <v-tooltip v-if="!mdAndUp" text="Chạy thử" location="bottom">
           <template #activator="{ props }">
-            <v-btn v-bind="props" variant="outlined" color="primary" icon="mdi-test-tube" size="small" :loading="testRunning" class="ml-1" @click="testRun" />
+            <v-btn v-bind="props" variant="outlined" color="primary" icon="mdi-test-tube" size="small" :loading="isJobRunning" :disabled="isJobRunning" class="ml-1" @click="testRun" />
           </template>
         </v-tooltip>
-        <v-btn v-else variant="outlined" color="primary" prepend-icon="mdi-test-tube" size="small" :loading="testRunning" class="ml-2" @click="testRun">Chạy thử (3 hội thoại)</v-btn>
+        <v-btn v-else variant="outlined" color="primary" prepend-icon="mdi-test-tube" size="small" :loading="isJobRunning" :disabled="isJobRunning" class="ml-2" @click="testRun">Chạy thử (3 hội thoại)</v-btn>
 
         <v-tooltip v-if="!mdAndUp" text="Chạy ngay" location="bottom">
           <template #activator="{ props }">
-            <v-btn v-bind="props" color="primary" icon="mdi-play" size="small" :loading="triggerRunning" class="ml-1" @click="openRunDialog" />
+            <v-btn v-bind="props" color="primary" icon="mdi-play" size="small" :disabled="isJobRunning" class="ml-1" @click="openRunDialog" />
           </template>
         </v-tooltip>
-        <v-btn v-else color="primary" prepend-icon="mdi-play" size="small" :loading="triggerRunning" class="ml-2" @click="openRunDialog">{{ $t('run_now') }}</v-btn>
+        <v-btn v-else color="primary" prepend-icon="mdi-play" size="small" :disabled="isJobRunning" class="ml-2" @click="openRunDialog">{{ $t('run_now') }}</v-btn>
 
         <v-btn v-if="isJobRunning" color="error" variant="outlined" prepend-icon="mdi-stop" size="small" class="ml-2" :loading="cancelling" @click="cancelJob">{{ mdAndUp ? 'Dừng' : '' }}</v-btn>
       </template>
@@ -754,9 +754,9 @@ function tagColor(tag: string): string {
   return idx >= 0 ? TAG_COLORS[idx % TAG_COLORS.length] : TAG_COLORS[0]
 }
 const selectedRunId = ref<string | null>(null)
-const testRunning = ref(false)
 const cancelling = ref(false)
-const isJobRunning = computed(() => testRunning.value || triggerRunning.value || jobStore.jobRuns?.[0]?.status === 'running')
+const isJobRunning = computed(() => jobStore.jobRuns?.[0]?.status === 'running')
+let pollTimer: ReturnType<typeof setTimeout> | null = null
 const expandedMap = ref<Record<string, boolean>>({})
 const runDialog = ref(false)
 const clearResultsDialog = ref(false)
@@ -855,7 +855,10 @@ function loadImagesForMessages(msgs: any[]) {
   }
 }
 watch(chatMessages, (val) => { for (const msgs of Object.values(val)) { if (msgs?.length) loadImagesForMessages(msgs) } }, { deep: true })
-onUnmounted(() => { for (const url of Object.values(authImageCache.value)) { if (url?.startsWith('blob:')) URL.revokeObjectURL(url) } })
+onUnmounted(() => {
+  stopPolling()
+  for (const url of Object.values(authImageCache.value)) { if (url?.startsWith('blob:')) URL.revokeObjectURL(url) }
+})
 
 // Parsed job fields
 const parsedOutputs = computed(() => {
@@ -1088,20 +1091,36 @@ onMounted(async () => {
     tenantAIProvider.value = data?.settings?.ai_provider || 'claude'
     tenantAIModel.value = data?.settings?.ai_model || ''
   } catch { /* fallback empty */ }
+  // Auto-start polling if job is currently running (e.g. after F5)
+  if (isJobRunning.value) {
+    startPolling()
+  }
 })
 
-async function pollUntilComplete() {
-  let pollAttempts = 0
-  const maxPollAttempts = 120 // 6 minutes max for AI jobs
-  while (pollAttempts < maxPollAttempts) {
-    await new Promise(r => setTimeout(r, 3000))
-    await jobStore.fetchJobRuns(tenantId.value, jobId.value)
-    const latestRun = jobStore.jobRuns[0]
-    if (!latestRun || latestRun.status !== 'running') break
-    pollAttempts++
+function startPolling() {
+  stopPolling()
+  async function tick() {
+    try {
+      await jobStore.fetchJobRuns(tenantId.value, jobId.value)
+      if (!isJobRunning.value) {
+        // Job finished — fetch final results
+        await jobStore.fetchAllJobResults(tenantId.value, jobId.value)
+        job.value = await jobStore.fetchJob(tenantId.value, jobId.value)
+        stopPolling()
+        return
+      }
+    } catch { /* ignore network errors, retry next tick */ }
+    pollTimer = setTimeout(tick, 3000)
   }
-  await jobStore.fetchAllJobResults(tenantId.value, jobId.value)
-  job.value = await jobStore.fetchJob(tenantId.value, jobId.value)
+  // Small delay before first poll to let backend create the run record
+  pollTimer = setTimeout(tick, 2000)
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearTimeout(pollTimer)
+    pollTimer = null
+  }
 }
 
 const currentRunProgress = computed(() => {
@@ -1143,23 +1162,17 @@ async function openRunDialog() {
 
 async function testRun() {
   if (!(await checkAIConfigured())) return
-  testRunning.value = true
   try {
     await jobStore.testRunJob(tenantId.value, jobId.value)
-    await pollUntilComplete()
+    startPolling()
   } catch {
     await jobStore.fetchJobRuns(tenantId.value, jobId.value)
-  } finally {
-    testRunning.value = false
   }
 }
-
-const triggerRunning = ref(false)
 
 async function confirmRun() {
   if (runConditionalError.value) return
   runDialog.value = false
-  triggerRunning.value = true
   try {
     const params: Record<string, string> = {}
     if (runMode.value === 'conditional') {
@@ -1168,11 +1181,9 @@ async function confirmRun() {
     }
     if (runLimit.value && runLimit.value > 0) params.limit = String(runLimit.value)
     await jobStore.triggerJob(tenantId.value, jobId.value, runMode.value, params)
-    await pollUntilComplete()
+    startPolling()
   } catch {
     await jobStore.fetchJobRuns(tenantId.value, jobId.value)
-  } finally {
-    triggerRunning.value = false
   }
 }
 
@@ -1180,9 +1191,9 @@ async function cancelJob() {
   cancelling.value = true
   try {
     await api.post(`/tenants/${tenantId.value}/jobs/${jobId.value}/cancel`)
-    testRunning.value = false
-    triggerRunning.value = false
+    stopPolling()
     await jobStore.fetchJobRuns(tenantId.value, jobId.value)
+    await jobStore.fetchAllJobResults(tenantId.value, jobId.value)
   } catch { /* ignore */ }
   finally { cancelling.value = false }
 }
