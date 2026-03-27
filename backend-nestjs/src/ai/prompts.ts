@@ -78,12 +78,12 @@ CH\u1EC8 tr\u1EA3 v\u1EC1 JSON, kh\u00F4ng th\u00EAm text kh\u00E1c.`;
 
 /** Format: [HH:mm] SenderName: content -- falls back to senderType when name is empty. */
 export function formatChatTranscript(messages: ChatMessage[]): string {
-  let result = '';
-  for (const msg of messages) {
-    const label = msg.senderName || msg.senderType;
-    result += `[${msg.sentAt}] ${label}: ${msg.content}\n`;
-  }
-  return result;
+  return messages
+    .map((msg) => {
+      const label = msg.senderName || msg.senderType;
+      return `[${msg.sentAt}] ${label}: ${msg.content}`;
+    })
+    .join('\n') + (messages.length > 0 ? '\n' : '');
 }
 
 export function wrapBatchPrompt(basePrompt: string, count: number): string {
@@ -96,9 +96,10 @@ CH\u1EC8 tr\u1EA3 v\u1EC1 JSON array, kh\u00F4ng th\u00EAm text kh\u00E1c.`;
 }
 
 export function formatBatchTranscript(items: BatchItem[]): string {
-  let result = '';
-  for (let i = 0; i < items.length; i++) {
-    result += `=== CU\u1ED8C H\u1ED8I THO\u1EA0I ${i + 1} (ID: ${items[i].conversationId}) ===\n${items[i].transcript}\n\n`;
-  }
-  return result;
+  return items
+    .map(
+      (item, i) =>
+        `=== CU\u1ED8C H\u1ED8I THO\u1EA0I ${i + 1} (ID: ${item.conversationId}) ===\n${item.transcript}`,
+    )
+    .join('\n\n') + (items.length > 0 ? '\n\n' : '');
 }
