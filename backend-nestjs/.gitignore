@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+*.js.map
+*.d.ts
+!jest-e2e.config.ts
