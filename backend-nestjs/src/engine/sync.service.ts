@@ -67,6 +67,7 @@ export class SyncService {
         'error',
         `decrypt failed: ${(err as Error).message}`,
         channel.tenant_id,
+        channel.name,
       );
       return;
     }
@@ -78,6 +79,7 @@ export class SyncService {
         'error',
         'adapter factory not configured',
         channel.tenant_id,
+        channel.name,
       );
       return;
     }
@@ -91,6 +93,7 @@ export class SyncService {
         'error',
         `adapter init failed: ${(err as Error).message}`,
         channel.tenant_id,
+        channel.name,
       );
       return;
     }
@@ -153,6 +156,7 @@ export class SyncService {
         'error',
         `fetch conversations failed: ${(err as Error).message}`,
         channel.tenant_id,
+        channel.name,
       );
       return;
     }
@@ -212,7 +216,7 @@ export class SyncService {
       // Upsert messages
       for (const msg of messages) {
         if (syncFiles) {
-          this.downloadAttachments(channel.tenant_id, convId, msg);
+          await this.downloadAttachments(channel.tenant_id, convId, msg);
         }
         try {
           await this.upsertMessage(channel.tenant_id, convId, msg);
@@ -225,10 +229,10 @@ export class SyncService {
       }
 
       // Update conversation message count
-      const count = await this.messageRepo.count({
+      const msgCount = await this.messageRepo.count({
         where: { conversation_id: convId },
       });
-      await this.conversationRepo.update(convId, { message_count: count });
+      await this.conversationRepo.update(convId, { message_count: msgCount });
     }
 
     this.logger.log(
@@ -256,7 +260,7 @@ export class SyncService {
    * SyncAllChannels syncs all active channels for a tenant.
    */
   async syncAllChannels(tenantId?: string): Promise<void> {
-    const where: any = { is_active: true };
+    const where: Record<string, unknown> = { is_active: true };
     if (tenantId) {
       where.tenant_id = tenantId;
     }
@@ -375,6 +379,7 @@ export class SyncService {
     status: string,
     errMsg: string,
     tenantId?: string,
+    channelName?: string,
   ): Promise<void> {
     const now = new Date();
     await this.channelRepo.update(channelId, {
@@ -384,33 +389,26 @@ export class SyncService {
       updated_at: now,
     });
 
-    if (errMsg) {
-      // Log error to activity logs
-      const resolvedTenantId = tenantId ?? '';
-      if (resolvedTenantId) {
-        const ch = await this.channelRepo.findOne({
-          where: { id: channelId },
-        });
-        await this.logActivity({
-          tenantId: resolvedTenantId,
-          action: 'sync.error',
-          resourceType: 'channel',
-          resourceId: channelId,
-          detail: `Sync failed: ${ch?.name ?? channelId}`,
-          errorMessage: errMsg,
-        });
-      }
+    if (errMsg && tenantId) {
+      await this.logActivity({
+        tenantId,
+        action: 'sync.error',
+        resourceType: 'channel',
+        resourceId: channelId,
+        detail: `Sync failed: ${channelName ?? channelId}`,
+        errorMessage: errMsg,
+      });
     }
   }
 
   /**
    * Download attachment files from URLs to local storage.
    */
-  private downloadAttachments(
+  private async downloadAttachments(
     tenantId: string,
     convId: string,
     msg: SyncedMessage,
-  ): void {
+  ): Promise<void> {
     for (let i = 0; i < msg.attachments.length; i++) {
       const att = msg.attachments[i];
       if (!att.url) continue;
@@ -443,18 +441,15 @@ export class SyncService {
         continue;
       }
 
-      // Download file asynchronously (fire-and-forget with timeout)
-      this.downloadFile(att.url, localPath)
-        .then(() => {
-          // Update attachment with local path (relative for serving)
-          msg.attachments[i].local_path = path.join(tenantId, convId, name);
-          this.logger.log(`downloaded ${att.url} -> ${localPath}`);
-        })
-        .catch((err) => {
-          this.logger.warn(
-            `download failed for ${att.url}: ${(err as Error).message}`,
-          );
-        });
+      try {
+        await this.downloadFile(att.url, localPath);
+        msg.attachments[i].local_path = path.join(tenantId, convId, name);
+        this.logger.log(`downloaded ${att.url} -> ${localPath}`);
+      } catch (err) {
+        this.logger.warn(
+          `download failed for ${att.url}: ${(err as Error).message}`,
+        );
+      }
     }
   }
 

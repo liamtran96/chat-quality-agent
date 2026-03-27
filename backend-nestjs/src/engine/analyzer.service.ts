@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { CryptoService } from '../common/crypto/crypto.service';
 import { newUUID } from '../common/helpers/uuid.helper';
@@ -335,29 +335,29 @@ export class AnalyzerService {
     });
     await this.jobRunRepo.update(run.id, { summary: initialSummary });
 
-    // Check batch mode setting (default: enabled with batch size 5)
+    // Batch-fetch batch settings in one query
     let batchMode = true;
     let batchSize = 5;
 
-    const batchModeSetting = await this.appSettingRepo.findOne({
-      where: { tenant_id: job.tenant_id, setting_key: 'ai_batch_mode' },
+    const batchSettings = await this.appSettingRepo.find({
+      where: {
+        tenant_id: job.tenant_id,
+        setting_key: In(['ai_batch_mode', 'ai_batch_size']),
+      },
     });
+    const batchSettingMap = new Map(batchSettings.map((s) => [s.setting_key, s]));
+
+    const batchModeSetting = batchSettingMap.get('ai_batch_mode');
     if (batchModeSetting) {
       batchMode = batchModeSetting.value_plain !== 'false';
     }
 
-    const batchSizeSetting = await this.appSettingRepo.findOne({
-      where: { tenant_id: job.tenant_id, setting_key: 'ai_batch_size' },
-    });
+    const batchSizeSetting = batchSettingMap.get('ai_batch_size');
     if (batchSizeSetting) {
       const n = parseInt(batchSizeSetting.value_plain, 10);
       if (!isNaN(n) && n > 0 && n <= 30) {
         batchSize = n;
       }
-    }
-    // Safety net
-    if (batchSize < 1) {
-      batchSize = 5;
     }
 
     let issuesFound = 0;
@@ -543,9 +543,6 @@ export class AnalyzerService {
       errorMessage,
     });
 
-    // Notifications are handled externally (not in this service)
-    // The Go backend calls notifications.NewDispatcher().SendJobResults here
-
     return run;
   }
 
@@ -553,19 +550,19 @@ export class AnalyzerService {
    * Get AI provider from tenant settings.
    */
   private async getProvider(job: Job): Promise<AIProvider> {
-    // Get AI provider from tenant settings (fallback to job's ai_provider)
-    let providerName = job.ai_provider;
-    const providerSetting = await this.appSettingRepo.findOne({
-      where: { tenant_id: job.tenant_id, setting_key: 'ai_provider' },
+    // Batch-fetch all AI settings in one query
+    const aiSettings = await this.appSettingRepo.find({
+      where: {
+        tenant_id: job.tenant_id,
+        setting_key: In(['ai_provider', 'ai_api_key', 'ai_model', 'ai_base_url']),
+      },
     });
-    if (providerSetting) {
-      providerName = providerSetting.value_plain;
-    }
+    const settingMap = new Map(aiSettings.map((s) => [s.setting_key, s]));
 
-    // Get API key from tenant settings
-    const apiKeySetting = await this.appSettingRepo.findOne({
-      where: { tenant_id: job.tenant_id, setting_key: 'ai_api_key' },
-    });
+    const providerSetting = settingMap.get('ai_provider');
+    const providerName = providerSetting?.value_plain || job.ai_provider;
+
+    const apiKeySetting = settingMap.get('ai_api_key');
     if (!apiKeySetting) {
       throw new Error(
         'API key not configured - go to Settings > AI Config',
@@ -583,23 +580,11 @@ export class AnalyzerService {
       apiKey = decrypted.toString('utf-8');
     }
 
-    // Get model from tenant settings (fallback to job's ai_model)
-    let model = job.ai_model;
-    const modelSetting = await this.appSettingRepo.findOne({
-      where: { tenant_id: job.tenant_id, setting_key: 'ai_model' },
-    });
-    if (modelSetting && modelSetting.value_plain) {
-      model = modelSetting.value_plain;
-    }
+    const modelSetting = settingMap.get('ai_model');
+    const model = modelSetting?.value_plain || job.ai_model;
 
-    // Get base URL from tenant settings (optional)
-    let baseURL = '';
-    const baseURLSetting = await this.appSettingRepo.findOne({
-      where: { tenant_id: job.tenant_id, setting_key: 'ai_base_url' },
-    });
-    if (baseURLSetting) {
-      baseURL = baseURLSetting.value_plain;
-    }
+    const baseURLSetting = settingMap.get('ai_base_url');
+    const baseURL = baseURLSetting?.value_plain || '';
 
     // Return a stub provider -- real implementations (Claude, Gemini) would be
     // injected via a factory. For now, throw for unsupported providers.
@@ -679,28 +664,33 @@ export class AnalyzerService {
         }
 
         // Save individual violations
-        for (const v of qcResult.violations || []) {
-          const detailJSON = JSON.stringify({
-            explanation: v.explanation,
-            suggestion: v.suggestion,
-            score: qcResult.score,
-            summary: qcResult.summary,
-          });
-          await this.jobResultRepo.save({
-            id: newUUID(),
-            job_run_id: runId,
-            tenant_id: tenantId,
-            conversation_id: conversationId,
-            result_type: 'qc_violation',
-            severity: v.severity,
-            rule_name: v.rule,
-            evidence: v.evidence,
-            detail: detailJSON,
-            ai_raw_response: aiResponse,
-            confidence: 1.0,
-            created_at: now,
-          });
-          count++;
+        const violations = qcResult.violations || [];
+        if (violations.length > 0) {
+          await Promise.all(
+            violations.map((v) => {
+              const detailJSON = JSON.stringify({
+                explanation: v.explanation,
+                suggestion: v.suggestion,
+                score: qcResult.score,
+                summary: qcResult.summary,
+              });
+              return this.jobResultRepo.save({
+                id: newUUID(),
+                job_run_id: runId,
+                tenant_id: tenantId,
+                conversation_id: conversationId,
+                result_type: 'qc_violation',
+                severity: v.severity,
+                rule_name: v.rule,
+                evidence: v.evidence,
+                detail: detailJSON,
+                ai_raw_response: aiResponse,
+                confidence: 1.0,
+                created_at: now,
+              });
+            }),
+          );
+          count = violations.length;
         }
         break;
       }
@@ -716,29 +706,34 @@ export class AnalyzerService {
           summary: string;
         };
 
-        for (const t of classResult.tags || []) {
-          const detailJSON = JSON.stringify({
-            explanation: t.explanation,
-            summary: classResult.summary,
-          });
-          await this.jobResultRepo.save({
-            id: newUUID(),
-            job_run_id: runId,
-            tenant_id: tenantId,
-            conversation_id: conversationId,
-            result_type: 'classification_tag',
-            rule_name: t.rule_name,
-            evidence: t.evidence,
-            detail: detailJSON,
-            ai_raw_response: aiResponse,
-            confidence: t.confidence,
-            created_at: now,
-          });
-          count++;
+        const tags = classResult.tags || [];
+        if (tags.length > 0) {
+          await Promise.all(
+            tags.map((t) => {
+              const detailJSON = JSON.stringify({
+                explanation: t.explanation,
+                summary: classResult.summary,
+              });
+              return this.jobResultRepo.save({
+                id: newUUID(),
+                job_run_id: runId,
+                tenant_id: tenantId,
+                conversation_id: conversationId,
+                result_type: 'classification_tag',
+                rule_name: t.rule_name,
+                evidence: t.evidence,
+                detail: detailJSON,
+                ai_raw_response: aiResponse,
+                confidence: t.confidence,
+                created_at: now,
+              });
+            }),
+          );
+          count = tags.length;
         }
 
-        // Create conversation_evaluation for classified conversations
-        if (classResult.tags && classResult.tags.length > 0) {
+        // Create conversation_evaluation record
+        if (tags.length > 0) {
           const evalDetail = JSON.stringify({
             summary: classResult.summary,
           });
@@ -755,10 +750,7 @@ export class AnalyzerService {
             confidence: 1.0,
             created_at: now,
           });
-        }
-
-        // No tags matched -- mark as SKIP
-        if (!classResult.tags || classResult.tags.length === 0) {
+        } else {
           const skipDetail = JSON.stringify({
             summary: classResult.summary,
           });
