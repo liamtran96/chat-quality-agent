@@ -19,6 +19,8 @@ import {
   SyncServiceInterface,
 } from './interfaces';
 
+const JOB_TIMEOUT_MS = 30 * 60 * 1000;
+
 @Injectable()
 export class SchedulerService implements OnModuleInit {
   private readonly logger = new Logger(SchedulerService.name);
@@ -47,7 +49,7 @@ export class SchedulerService implements OnModuleInit {
     this.logger.log('Scheduler started');
   }
 
-  /** On startup, any "running" job_run is stuck because its goroutine/promise died with the previous process. */
+  /** On startup, any "running" job_run is stuck because its process died with the previous instance. */
   async cleanupStuckRuns(): Promise<void> {
     const stuckRuns = await this.jobRunRepo.find({
       where: { status: 'running' },
@@ -82,6 +84,11 @@ export class SchedulerService implements OnModuleInit {
   }
 
   async syncAllChannelsTask(): Promise<void> {
+    if (!this.syncService) {
+      this.logger.warn('SyncService not available, skipping channel sync');
+      return;
+    }
+
     const channels = await this.channelRepo.find({
       where: { is_active: true },
     });
@@ -113,11 +120,6 @@ export class SchedulerService implements OnModuleInit {
       }
 
       if (ch.last_sync_status === 'syncing') {
-        continue;
-      }
-
-      if (!this.syncService) {
-        this.logger.warn('SyncService not available, skipping channel sync');
         continue;
       }
 
@@ -179,8 +181,7 @@ export class SchedulerService implements OnModuleInit {
       this.logger.warn('AnalyzerService not available, skipping job run');
       return;
     }
-    const timeoutMs = 30 * 60 * 1000;
-    await this.analyzerService.runJob(job, timeoutMs);
+    await this.analyzerService.runJob(job, JOB_TIMEOUT_MS);
   }
 
   /** Called after job CRUD operations to re-sync the cron schedule with DB state. */
