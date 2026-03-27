@@ -37,12 +37,10 @@ export class PermissionGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const role = request.tenant_role;
 
-    // Owner and admin always have full access
     if (role === 'owner' || role === 'admin') {
       return true;
     }
 
-    // Member: check permissions JSON
     const permsStr = request.tenant_permissions;
     if (!permsStr) {
       throw new ForbiddenException('no_permissions');

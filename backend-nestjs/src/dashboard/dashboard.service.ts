@@ -49,7 +49,6 @@ export class DashboardService {
     if (dateTo) {
       const parsed = new Date(dateTo);
       if (!isNaN(parsed.getTime())) {
-        // end of day
         parsed.setUTCHours(23, 59, 59, 0);
         to = parsed;
       }
@@ -59,7 +58,6 @@ export class DashboardService {
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Run all independent queries in parallel
     const [
       activeChannels,
       activeJobs,
@@ -185,23 +183,20 @@ export class DashboardService {
   }
 
   async getOnboardingStatus(tenantId: string) {
-    const [channelCount, convCount, jobCount, runCount] = await Promise.all([
+    const [channelCount, convCount, jobCount, runCount, aiSetting, dismissSetting] = await Promise.all([
       this.channelRepo.count({ where: { tenant_id: tenantId } }),
       this.conversationRepo.count({ where: { tenant_id: tenantId } }),
       this.jobRepo.count({ where: { tenant_id: tenantId } }),
       this.jobRunRepo.count({ where: { tenant_id: tenantId } }),
+      this.appSettingRepo.findOne({
+        where: { tenant_id: tenantId, setting_key: 'ai_provider' },
+      }),
+      this.appSettingRepo.findOne({
+        where: { tenant_id: tenantId, setting_key: 'onboarding_dismissed' },
+      }),
     ]);
 
-    // AI configured?
-    const aiSetting = await this.appSettingRepo.findOne({
-      where: { tenant_id: tenantId, setting_key: 'ai_provider' },
-    });
     const aiConfigured = !!(aiSetting?.value_plain);
-
-    // Check if dismissed
-    const dismissSetting = await this.appSettingRepo.findOne({
-      where: { tenant_id: tenantId, setting_key: 'onboarding_dismissed' },
-    });
     const dismissed = dismissSetting?.value_plain === 'true';
 
     return {

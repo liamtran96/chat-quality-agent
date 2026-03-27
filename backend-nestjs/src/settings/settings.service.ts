@@ -9,8 +9,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { AppSetting, Tenant, User } from '../entities';
 import { CryptoService } from '../common/crypto/crypto.service';
-import { newUUID } from '../common/helpers';
-import { validatePasswordComplexity } from '../common/helpers/password.helper';
+import { newUUID, validatePasswordComplexity } from '../common/helpers';
 import { SaveAISettingsDto } from './dto/save-ai-settings.dto';
 import { SaveAnalysisSettingsDto } from './dto/save-analysis-settings.dto';
 import { SaveGeneralSettingsDto } from './dto/save-general-settings.dto';
@@ -116,21 +115,21 @@ export class SettingsService {
   }
 
   async testAIKey(tenantId: string) {
-    // Get the encrypted API key
-    const setting = await this.settingRepo.findOne({
-      where: { tenant_id: tenantId, setting_key: 'ai_api_key' },
-    });
+    const [setting, providerSetting] = await Promise.all([
+      this.settingRepo.findOne({
+        where: { tenant_id: tenantId, setting_key: 'ai_api_key' },
+      }),
+      this.settingRepo.findOne({
+        where: { tenant_id: tenantId, setting_key: 'ai_provider' },
+      }),
+    ]);
+
     if (!setting?.value_encrypted) {
       throw new BadRequestException('no_api_key_configured');
     }
 
-    // Get provider
-    const providerSetting = await this.settingRepo.findOne({
-      where: { tenant_id: tenantId, setting_key: 'ai_provider' },
-    });
     const provider = providerSetting?.value_plain || 'claude';
 
-    // Decrypt to verify it works (the Go backend just checks config exists)
     try {
       this.cryptoService.decrypt(setting.value_encrypted);
     } catch {
@@ -141,7 +140,6 @@ export class SettingsService {
   }
 
   async saveGeneralSettings(tenantId: string, dto: SaveGeneralSettingsDto) {
-    // Update tenant name
     if (dto.company_name) {
       await this.tenantRepo.update(tenantId, {
         name: dto.company_name,
@@ -164,7 +162,6 @@ export class SettingsService {
       );
     }
 
-    // Strip trailing slash from app URL
     const appUrl = (dto.app_url || '').replace(/\/+$/, '');
     await this.upsertSetting(tenantId, 'app_url', appUrl, null);
 

@@ -9,7 +9,6 @@ import { SettingsModule } from './settings/settings.module';
 import { UsersModule } from './users/users.module';
 import { LogsModule } from './logs/logs.module';
 
-// Entities
 import {
   Tenant,
   User,

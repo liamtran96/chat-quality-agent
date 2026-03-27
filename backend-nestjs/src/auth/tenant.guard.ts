@@ -46,7 +46,6 @@ export class TenantGuard implements CanActivate {
       throw new ForbiddenException('tenant_access_denied');
     }
 
-    // Attach tenant info to request
     request.tenant_id = tenantId;
     request.tenant_role = ut.role;
     request.tenant_permissions = ut.permissions;

@@ -11,8 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserTenant } from '../entities';
-import { newUUID } from '../common/helpers';
-import { validatePasswordComplexity } from '../common/helpers/password.helper';
+import { newUUID, validatePasswordComplexity } from '../common/helpers';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -60,10 +59,8 @@ export class UsersService {
       throw new BadRequestException({ error: 'weak_password', message: error });
     }
 
-    // Check if user already exists
     let user = await this.userRepo.findOne({ where: { email: dto.email } });
     if (!user) {
-      // Create new user
       const hash = await bcrypt.hash(dto.password, 10);
       user = this.userRepo.create({
         id: newUUID(),
@@ -81,7 +78,6 @@ export class UsersService {
       }
     }
 
-    // Check if already in tenant
     const existing = await this.userTenantRepo.findOne({
       where: { user_id: user.id, tenant_id: tenantId },
     });
@@ -89,7 +85,6 @@ export class UsersService {
       throw new ConflictException('user_already_in_tenant');
     }
 
-    // Add to tenant
     const ut = this.userTenantRepo.create({
       user_id: user.id,
       tenant_id: tenantId,
@@ -114,7 +109,6 @@ export class UsersService {
     currentRole: string,
     dto: UpdateRoleDto,
   ) {
-    // Can't change own role
     if (userId === currentUserId) {
       throw new BadRequestException('cannot_change_own_role');
     }
@@ -126,7 +120,6 @@ export class UsersService {
       throw new NotFoundException('user_not_in_tenant');
     }
 
-    // Role hierarchy: admin can't manage owner or other admins
     if (
       currentRole === 'admin' &&
       (targetUT.role === 'owner' || targetUT.role === 'admin')
@@ -152,7 +145,6 @@ export class UsersService {
     userId: string,
     dto: ResetPasswordDto,
   ) {
-    // Verify user belongs to tenant
     const ut = await this.userTenantRepo.findOne({
       where: { user_id: userId, tenant_id: tenantId },
     });
@@ -189,7 +181,6 @@ export class UsersService {
     userId: string,
     currentUserId: string,
   ) {
-    // Can't remove self
     if (userId === currentUserId) {
       throw new BadRequestException('cannot_remove_self');
     }
