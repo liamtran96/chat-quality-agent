@@ -48,7 +48,7 @@ export class ConversationsController {
     });
 
     if (result.type === 'json') {
-      return res.status(HttpStatus.OK).json((result as any).body);
+      return res.status(HttpStatus.OK).json(result.body);
     }
 
     const contentType =
@@ -59,9 +59,9 @@ export class ConversationsController {
     res.setHeader('Content-Type', contentType);
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=${(result as any).filename}`,
+      `attachment; filename=${result.filename}`,
     );
-    return res.status(HttpStatus.OK).send((result as any).content);
+    return res.status(HttpStatus.OK).send(result.content);
   }
 
   @Get('conversations/evaluated')

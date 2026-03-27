@@ -25,6 +25,11 @@ interface ExportQuery {
   channel_type?: string;
 }
 
+export type ExportResult =
+  | { type: 'json'; body: { error: string } }
+  | { type: 'csv'; content: string; filename: string }
+  | { type: 'txt'; content: string; filename: string };
+
 @Injectable()
 export class ConversationsService {
   constructor(
@@ -51,21 +56,7 @@ export class ConversationsService {
       .createQueryBuilder('conversations')
       .where('conversations.tenant_id = :tenantId', { tenantId });
 
-    if (query.channel_id) {
-      qb.andWhere('conversations.channel_id = :channelId', {
-        channelId: query.channel_id,
-      });
-    }
-
-    if (query.channel_type) {
-      qb.innerJoin(
-        'channels',
-        'ch_filter',
-        'ch_filter.id = conversations.channel_id',
-      ).andWhere('ch_filter.channel_type = :channelType', {
-        channelType: query.channel_type,
-      });
-    }
+    this.applyChannelFilters(qb, query.channel_id, query.channel_type);
 
     if (query.search) {
       qb.andWhere('conversations.customer_name ILIKE :search', {
@@ -83,7 +74,6 @@ export class ConversationsService {
       .limit(perPage)
       .getMany();
 
-    // Get channel info
     const channelIds = [...new Set(conversations.map((c) => c.channel_id))];
     const channelMap = new Map<string, Channel>();
 
@@ -194,10 +184,8 @@ export class ConversationsService {
       return { has_evaluation: false, groups: [] };
     }
 
-    // Collect unique job_run_ids
     const runIds = [...new Set(results.map((r) => r.job_run_id))];
 
-    // Fetch job_runs with job info
     const runs: Array<{
       run_id: string;
       job_name: string;
@@ -224,7 +212,6 @@ export class ConversationsService {
       runMap.set(r.run_id, r);
     }
 
-    // Group results by job_run_id, preserving insertion order
     const groupMap = new Map<
       string,
       {
@@ -272,7 +259,6 @@ export class ConversationsService {
       throw new NotFoundException('conversation_not_found');
     }
 
-    // Count conversations that come before this one (ordered by last_message_at DESC)
     const position = await this.conversationRepo
       .createQueryBuilder('conversations')
       .where('conversations.tenant_id = :tenantId', { tenantId })
@@ -286,7 +272,7 @@ export class ConversationsService {
     return { page };
   }
 
-  async exportMessages(tenantId: string, query: ExportQuery) {
+  async exportMessages(tenantId: string, query: ExportQuery): Promise<ExportResult> {
     const format = query.format || 'txt';
 
     if (!query.from || !query.to) {
@@ -314,21 +300,7 @@ export class ConversationsService {
       .andWhere('conversations.last_message_at >= :fromDate', { fromDate })
       .andWhere('conversations.last_message_at <= :toDate', { toDate });
 
-    if (query.channel_id) {
-      qb.andWhere('conversations.channel_id = :channelId', {
-        channelId: query.channel_id,
-      });
-    }
-
-    if (query.channel_type) {
-      qb.innerJoin(
-        'channels',
-        'ch_filter',
-        'ch_filter.id = conversations.channel_id',
-      ).andWhere('ch_filter.channel_type = :channelType', {
-        channelType: query.channel_type,
-      });
-    }
+    this.applyChannelFilters(qb, query.channel_id, query.channel_type);
 
     const conversations = await qb
       .orderBy('conversations.last_message_at', 'ASC')
@@ -341,7 +313,6 @@ export class ConversationsService {
       };
     }
 
-    // Fetch all messages for these conversations
     const convIds = conversations.map((c) => c.id);
     const allMessages = await this.messageRepo
       .createQueryBuilder('messages')
@@ -351,7 +322,6 @@ export class ConversationsService {
       .addOrderBy('messages.sent_at', 'ASC')
       .getMany();
 
-    // Group messages by conversation
     const msgMap = new Map<string, Message[]>();
     for (const msg of allMessages) {
       if (!msgMap.has(msg.conversation_id)) {
@@ -467,6 +437,24 @@ export class ConversationsService {
     if (msg.content) return msg.content;
     if (msg.content_type !== 'text') return `[${msg.content_type}]`;
     return '';
+  }
+
+  private applyChannelFilters(
+    qb: SelectQueryBuilder<Conversation>,
+    channelId?: string,
+    channelType?: string,
+  ): void {
+    if (channelId) {
+      qb.andWhere('conversations.channel_id = :channelId', { channelId });
+    }
+
+    if (channelType) {
+      qb.innerJoin(
+        'channels',
+        'ch_filter',
+        'ch_filter.id = conversations.channel_id',
+      ).andWhere('ch_filter.channel_type = :channelType', { channelType });
+    }
   }
 
   private applyEvaluationFilter(
