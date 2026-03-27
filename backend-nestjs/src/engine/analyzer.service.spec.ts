@@ -523,14 +523,9 @@ describe('AnalyzerService', () => {
       messageRepo.createQueryBuilder.mockReturnValue(msgQb);
 
       // Batch mode disabled
-      appSettingRepo.findOne.mockImplementation(
-        async (opts: { where: { setting_key: string } }) => {
-          if (opts?.where?.setting_key === 'ai_batch_mode') {
-            return { value_plain: 'false' };
-          }
-          return null;
-        },
-      );
+      appSettingRepo.find.mockResolvedValue([
+        { setting_key: 'ai_batch_mode', value_plain: 'false' },
+      ]);
 
       const passResponse = JSON.stringify({
         verdict: 'PASS',
@@ -615,14 +610,9 @@ describe('AnalyzerService', () => {
       msgQb.getMany.mockResolvedValue(mockMessages);
       messageRepo.createQueryBuilder.mockReturnValue(msgQb);
 
-      appSettingRepo.findOne.mockImplementation(
-        async (opts: { where: { setting_key: string } }) => {
-          if (opts?.where?.setting_key === 'ai_batch_mode') {
-            return { value_plain: 'false' };
-          }
-          return null;
-        },
-      );
+      appSettingRepo.find.mockResolvedValue([
+        { setting_key: 'ai_batch_mode', value_plain: 'false' },
+      ]);
 
       const errorProvider = new MockAIProvider(
         {} as AIResponse,
@@ -697,8 +687,7 @@ describe('AnalyzerService', () => {
       ]);
       messageRepo.createQueryBuilder.mockReturnValue(msgQb);
 
-      // Batch mode enabled (default)
-      appSettingRepo.findOne.mockResolvedValue(null);
+      // Batch mode enabled (default -- find returns [] so defaults apply)
 
       const passResponse = JSON.stringify({
         verdict: 'PASS',
