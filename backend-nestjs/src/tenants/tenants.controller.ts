@@ -23,20 +23,12 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
-  /**
-   * GET /api/v1/tenants
-   * List all tenants the current user belongs to.
-   */
   @Get()
   @UseGuards(JwtAuthGuard)
   async listTenants(@Req() req: any): Promise<TenantResponse[]> {
     return this.tenantsService.listTenants(req.user.id);
   }
 
-  /**
-   * POST /api/v1/tenants
-   * Create a new tenant. The creator becomes the owner.
-   */
   @Post()
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
@@ -47,21 +39,13 @@ export class TenantsController {
     return this.tenantsService.createTenant(req.user.id, dto);
   }
 
-  /**
-   * GET /api/v1/tenants/:tenantId
-   * Get a single tenant (requires membership).
-   */
   @Get(':tenantId')
   @UseGuards(JwtAuthGuard, TenantGuard)
   async getTenant(@TenantId() tenantId: string): Promise<TenantResponse> {
     return this.tenantsService.getTenant(tenantId);
   }
 
-  /**
-   * GET /api/v1/tenants/:tenantId/me
-   * Get current user's role and permissions within this tenant.
-   * Reads from request context set by TenantGuard (no extra DB query).
-   */
+  /** Reads role/permissions from request context set by TenantGuard (no extra DB query). */
   @Get(':tenantId/me')
   @UseGuards(JwtAuthGuard, TenantGuard)
   getTenantMe(
@@ -73,10 +57,6 @@ export class TenantsController {
     };
   }
 
-  /**
-   * PUT /api/v1/tenants/:tenantId
-   * Update tenant name. Requires owner or admin role.
-   */
   @Put(':tenantId')
   @UseGuards(JwtAuthGuard, TenantGuard, RolesGuard)
   @Roles('owner', 'admin')
@@ -87,10 +67,6 @@ export class TenantsController {
     return this.tenantsService.updateTenant(tenantId, dto);
   }
 
-  /**
-   * DELETE /api/v1/tenants/:tenantId
-   * Delete a tenant and all related data. Requires owner role.
-   */
   @Delete(':tenantId')
   @UseGuards(JwtAuthGuard, TenantGuard, RolesGuard)
   @Roles('owner')

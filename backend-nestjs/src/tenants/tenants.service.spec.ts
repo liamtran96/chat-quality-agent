@@ -217,29 +217,8 @@ describe('TenantsService', () => {
     });
   });
 
-  describe('getTenantMembership', () => {
-    it('should return role and permissions from request context', async () => {
-      userTenantRepo.findOne.mockResolvedValueOnce({
-        role: 'admin',
-        permissions: '{"channels":"rw","jobs":"r"}',
-      });
-
-      const result = await service.getTenantMembership('tenant-1', 'user-1');
-      expect(result).toEqual({
-        role: 'admin',
-        permissions: '{"channels":"rw","jobs":"r"}',
-      });
-    });
-
-    it('should return empty values when membership not found', async () => {
-      const result = await service.getTenantMembership('tenant-1', 'user-1');
-      expect(result).toEqual({ role: '', permissions: '' });
-    });
-  });
-
   describe('deleteTenant - cascade order', () => {
-    it('should delete resources in the correct cascade order (child -> parent)', async () => {
-      // Setup: simulate conversations and job runs exist
+    it('should delete children before parents and all expected entities', async () => {
       conversationRepo.find.mockResolvedValueOnce([
         { id: 'conv-1' },
         { id: 'conv-2' },
@@ -250,38 +229,44 @@ describe('TenantsService', () => {
 
       await service.deleteTenant('tenant-1');
 
-      // Verify the exact cascade order from the Go code
-      expect(deleteCallOrder).toEqual([
-        'Message',          // 1. Messages (via conversations)
-        'Conversation',     // 2. Conversations
-        'JobResult',        // 3. JobResults (via job_runs)
-        'JobRun',           // 4. JobRuns
-        'AIUsageLog',       // 5. AIUsageLogs
-        'NotificationLog',  // 6. NotificationLogs
-        'ActivityLog',      // 7. ActivityLogs
-        'Job',              // 8. Jobs
-        'AppSetting',       // 9. AppSettings
-        'Channel',          // 10. Channels
-        'UserTenant',       // 11. UserTenants
-        'Tenant',           // 12. Tenant
-      ]);
+      // Phase 1 children (Message, JobResult) must appear before Phase 2 entities
+      const phase2Entities = [
+        'Conversation', 'JobRun', 'AIUsageLog', 'NotificationLog',
+        'ActivityLog', 'Job', 'AppSetting', 'Channel', 'UserTenant',
+      ];
+      const messageIdx = deleteCallOrder.indexOf('Message');
+      const jobResultIdx = deleteCallOrder.indexOf('JobResult');
+
+      for (const entity of phase2Entities) {
+        const idx = deleteCallOrder.indexOf(entity);
+        expect(idx).toBeGreaterThan(messageIdx);
+        expect(idx).toBeGreaterThan(jobResultIdx);
+      }
+
+      // Tenant must be deleted last
+      const tenantIdx = deleteCallOrder.indexOf('Tenant');
+      expect(tenantIdx).toBe(deleteCallOrder.length - 1);
+
+      // All entities should be present
+      expect(deleteCallOrder).toContain('Message');
+      expect(deleteCallOrder).toContain('JobResult');
+      for (const entity of phase2Entities) {
+        expect(deleteCallOrder).toContain(entity);
+      }
+      expect(deleteCallOrder).toContain('Tenant');
     });
 
     it('should skip message deletion when no conversations exist', async () => {
       await service.deleteTenant('tenant-1');
 
-      // Message should NOT be in the delete order (no conversations found)
       expect(deleteCallOrder).not.toContain('Message');
-      // But Conversation delete should still be called
       expect(deleteCallOrder).toContain('Conversation');
     });
 
     it('should skip job result deletion when no job runs exist', async () => {
       await service.deleteTenant('tenant-1');
 
-      // JobResult should NOT be in the delete order (no runs found)
       expect(deleteCallOrder).not.toContain('JobResult');
-      // But JobRun delete should still be called
       expect(deleteCallOrder).toContain('JobRun');
     });
   });

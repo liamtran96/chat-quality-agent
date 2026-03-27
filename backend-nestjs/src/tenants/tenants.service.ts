@@ -65,10 +65,6 @@ export class TenantsService {
     private readonly configService: ConfigService,
   ) {}
 
-  /**
-   * List all tenants the user belongs to, with channel and job counts.
-   * Ported from Go: handlers/tenants.go ListTenants()
-   */
   async listTenants(userId: string): Promise<TenantResponse[]> {
     const userTenants = await this.userTenantRepo.find({
       where: { user_id: userId },
@@ -83,35 +79,13 @@ export class TenantsService {
       where: { id: In(tenantIds) },
     });
 
-    const results: TenantResponse[] = [];
-    for (const t of tenants) {
-      const channelsCount = await this.channelRepo.count({
-        where: { tenant_id: t.id },
-      });
-      const jobsCount = await this.jobRepo.count({
-        where: { tenant_id: t.id },
-      });
-      results.push({
-        id: t.id,
-        name: t.name,
-        slug: t.slug,
-        channels_count: channelsCount,
-        jobs_count: jobsCount,
-      });
-    }
-
-    return results;
+    return Promise.all(tenants.map((t) => this.buildTenantResponse(t)));
   }
 
-  /**
-   * Create a new tenant and assign the creator as owner.
-   * Ported from Go: handlers/tenants.go CreateTenant()
-   */
   async createTenant(
     userId: string,
     dto: CreateTenantDto,
   ): Promise<TenantResponse> {
-    // Validate slug format
     if (dto.slug.length < 3 || !SLUG_REGEX.test(dto.slug)) {
       throw new ConflictException({
         error: 'invalid_slug',
@@ -119,7 +93,6 @@ export class TenantsService {
       });
     }
 
-    // Check slug uniqueness
     const existing = await this.tenantRepo.count({
       where: { slug: dto.slug },
     });
@@ -143,7 +116,6 @@ export class TenantsService {
       throw new InternalServerErrorException({ error: 'create_tenant_failed' });
     }
 
-    // Add creator as owner
     const ut = this.userTenantRepo.create({
       user_id: userId,
       tenant_id: tenant.id,
@@ -160,22 +132,20 @@ export class TenantsService {
     };
   }
 
-  /**
-   * Get a single tenant with counts.
-   * Ported from Go: handlers/tenants.go GetTenant()
-   */
   async getTenant(tenantId: string): Promise<TenantResponse> {
     const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
     if (!tenant) {
       throw new NotFoundException({ error: 'tenant_not_found' });
     }
 
-    const channelsCount = await this.channelRepo.count({
-      where: { tenant_id: tenantId },
-    });
-    const jobsCount = await this.jobRepo.count({
-      where: { tenant_id: tenantId },
-    });
+    return this.buildTenantResponse(tenant);
+  }
+
+  private async buildTenantResponse(tenant: Tenant): Promise<TenantResponse> {
+    const [channelsCount, jobsCount] = await Promise.all([
+      this.channelRepo.count({ where: { tenant_id: tenant.id } }),
+      this.jobRepo.count({ where: { tenant_id: tenant.id } }),
+    ]);
 
     return {
       id: tenant.id,
@@ -186,28 +156,6 @@ export class TenantsService {
     };
   }
 
-  /**
-   * Get the current user's membership (role + permissions) for a tenant.
-   * Ported from Go: handlers/auth.go GetTenantMe()
-   */
-  async getTenantMembership(
-    tenantId: string,
-    userId: string,
-  ): Promise<{ role: string; permissions: string }> {
-    const ut = await this.userTenantRepo.findOne({
-      where: { user_id: userId, tenant_id: tenantId },
-    });
-
-    return {
-      role: ut?.role ?? '',
-      permissions: ut?.permissions ?? '',
-    };
-  }
-
-  /**
-   * Update a tenant's name.
-   * Ported from Go: handlers/tenants.go UpdateTenant()
-   */
   async updateTenant(
     tenantId: string,
     dto: UpdateTenantDto,
@@ -225,78 +173,43 @@ export class TenantsService {
   }
 
   /**
-   * Delete a tenant and all related data in cascade order.
-   * Ported from Go: handlers/tenants.go DeleteTenant()
-   *
-   * Cascade order (child -> parent):
-   *  0. Files on disk
-   *  1. Messages (via conversations)
-   *  2. Conversations
-   *  3. JobResults (via job_runs)
-   *  4. JobRuns
-   *  5. AIUsageLogs
-   *  6. NotificationLogs
-   *  7. ActivityLogs
-   *  8. Jobs
-   *  9. AppSettings
-   * 10. Channels
-   * 11. UserTenants
-   * 12. Tenant
+   * Delete a tenant and all related data.
+   * Order matters: children with FK constraints must be deleted before parents.
+   * Independent sibling deletes are parallelized where safe.
    */
   async deleteTenant(tenantId: string): Promise<{ message: string }> {
-    // 0. Delete all local attachment files for this tenant
     const filesPath = this.configService.get<string>('filesPath') || '/var/lib/cqa/files';
     const tenantFilesDir = path.join(filesPath, tenantId);
     fs.rmSync(tenantFilesDir, { recursive: true, force: true });
 
-    // 1. Messages (via conversations)
-    const conversations = await this.conversationRepo.find({
-      where: { tenant_id: tenantId },
-      select: ['id'],
-    });
+    // Phase 1: Delete children that depend on conversation/job_run IDs
+    const [conversations, jobRuns] = await Promise.all([
+      this.conversationRepo.find({ where: { tenant_id: tenantId }, select: ['id'] }),
+      this.jobRunRepo.find({ where: { tenant_id: tenantId }, select: ['id'] }),
+    ]);
+
     const convIds = conversations.map((c) => c.id);
-    if (convIds.length > 0) {
-      await this.messageRepo.delete({ conversation_id: In(convIds) });
-    }
-
-    // 2. Conversations
-    await this.conversationRepo.delete({ tenant_id: tenantId });
-
-    // 3. JobResults (via job_runs)
-    const jobRuns = await this.jobRunRepo.find({
-      where: { tenant_id: tenantId },
-      select: ['id'],
-    });
     const runIds = jobRuns.map((r) => r.id);
-    if (runIds.length > 0) {
-      await this.jobResultRepo.delete({ job_run_id: In(runIds) });
-    }
 
-    // 4. JobRuns
-    await this.jobRunRepo.delete({ tenant_id: tenantId });
+    await Promise.all([
+      convIds.length > 0 ? this.messageRepo.delete({ conversation_id: In(convIds) }) : Promise.resolve(),
+      runIds.length > 0 ? this.jobResultRepo.delete({ job_run_id: In(runIds) }) : Promise.resolve(),
+    ]);
 
-    // 5. AIUsageLogs
-    await this.aiUsageLogRepo.delete({ tenant_id: tenantId });
+    // Phase 2: Delete all tenant-scoped tables (no inter-dependencies)
+    await Promise.all([
+      this.conversationRepo.delete({ tenant_id: tenantId }),
+      this.jobRunRepo.delete({ tenant_id: tenantId }),
+      this.aiUsageLogRepo.delete({ tenant_id: tenantId }),
+      this.notificationLogRepo.delete({ tenant_id: tenantId }),
+      this.activityLogRepo.delete({ tenant_id: tenantId }),
+      this.jobRepo.delete({ tenant_id: tenantId }),
+      this.appSettingRepo.delete({ tenant_id: tenantId }),
+      this.channelRepo.delete({ tenant_id: tenantId }),
+      this.userTenantRepo.delete({ tenant_id: tenantId }),
+    ]);
 
-    // 6. NotificationLogs
-    await this.notificationLogRepo.delete({ tenant_id: tenantId });
-
-    // 7. ActivityLogs
-    await this.activityLogRepo.delete({ tenant_id: tenantId });
-
-    // 8. Jobs
-    await this.jobRepo.delete({ tenant_id: tenantId });
-
-    // 9. AppSettings
-    await this.appSettingRepo.delete({ tenant_id: tenantId });
-
-    // 10. Channels
-    await this.channelRepo.delete({ tenant_id: tenantId });
-
-    // 11. UserTenants
-    await this.userTenantRepo.delete({ tenant_id: tenantId });
-
-    // 12. Tenant
+    // Phase 3: Delete the tenant itself
     await this.tenantRepo.delete({ id: tenantId });
 
     return { message: 'deleted' };
