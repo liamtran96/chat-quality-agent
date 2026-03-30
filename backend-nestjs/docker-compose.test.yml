@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgres:16
+    container_name: cqa-postgres-test
+    environment:
+      POSTGRES_USER: cqa
+      POSTGRES_PASSWORD: cqa
+      POSTGRES_DB: cqa_test
+    ports:
+      - '5433:5432'
+    volumes:
+      - pgdata-test:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cqa -d cqa_test']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata-test:
