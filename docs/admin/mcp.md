@@ -45,7 +45,21 @@ Mở file cấu hình Claude Desktop (`claude_desktop_config.json`):
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-Thêm cấu hình MCP server:
+::: warning Đừng dán đè lên nội dung cũ
+File này thường đã có sẵn cấu hình. Nếu dán cả khối bên dưới vào cuối file, bạn sẽ
+có hai khối JSON nối nhau và Claude Desktop báo lỗi:
+
+```
+There was an error reading or parsing claude_desktop_config.json:
+Unexpected non-whitespace character after JSON at position ...
+```
+
+Hãy xem file hiện có nội dung gì rồi làm theo đúng trường hợp bên dưới.
+:::
+
+**Trường hợp 1 — File rỗng hoặc chỉ có `{}`**
+
+Thay toàn bộ nội dung bằng:
 
 ```json
 {
@@ -60,7 +74,29 @@ Thêm cấu hình MCP server:
 }
 ```
 
+**Trường hợp 2 — File đã có `mcpServers` với server khác**
+
+Chỉ thêm mục `"cqa"` vào bên trong, nhớ dấu phẩy ngăn cách giữa các mục:
+
+```json
+{
+  "mcpServers": {
+    "server-cu-cua-ban": {
+      "command": "..."
+    },
+    "cqa": {
+      "url": "https://cqa.yourdomain.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_CLIENT_SECRET"
+      }
+    }
+  }
+}
+```
+
 Thay `cqa.yourdomain.com` bằng URL CQA và `YOUR_CLIENT_SECRET` bằng secret vừa copy.
+
+Trước khi lưu, kiểm tra file có đúng một dấu `{` mở đầu và một dấu `}` kết thúc.
 
 Khởi động lại Claude Desktop. Bạn sẽ thấy icon CQA trong danh sách MCP tools.
 

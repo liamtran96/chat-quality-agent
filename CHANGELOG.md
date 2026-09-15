@@ -14,6 +14,7 @@
 - **Chứng chỉ hết hạn không tự cấp lại**: chứng chỉ để quá hạn lâu thì lệnh gia hạn bị Let's Encrypt từ chối vì bản cũ đã bị xoá khỏi hệ thống, mà luồng khởi động lại chỉ biết gia hạn nên kẹt vĩnh viễn — nay tự chuyển sang cấp mới khi gia hạn hỏng
 
 ### Tài liệu
+- **Hướng dẫn MCP** (#49): tách rõ hai trường hợp file cấu hình Claude Desktop rỗng và đã có sẵn nội dung — trước đây chỉ đưa một khối JSON hoàn chỉnh nên nhiều người dán thêm vào file có sẵn, thành hai khối JSON nối nhau và Claude Desktop báo lỗi không đọc được
 - **Quên mật khẩu admin**: viết lại mục trong FAQ — hướng dẫn cũ dùng `-u root -p$MYSQL_ROOT_PASSWORD` trong khi biến này không tồn tại ở shell của host nên chạy sẽ tắc, lại thiếu hẳn bước sinh mã hoá mật khẩu và gợi ý "thêm admin mới qua API" vốn không thực hiện được khi chưa đăng nhập được. Bổ sung cách xử lý khi bị khoá do đăng nhập sai 5 lần
 - **Tài liệu cài đặt**: thêm mục Lệnh quản trị liệt kê các lệnh chạy trực tiếp trên server
 
