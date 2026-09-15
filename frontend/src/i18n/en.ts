@@ -301,4 +301,9 @@ export default {
   storage_old_files_desc: 'After enabling S3, new files go to S3 while existing files are still served from the server. Move them whenever you like.',
   storage_guide: 'Read the migration guide',
   advanced_options: 'Advanced options',
+  storage_off_title: 'Turn off S3 for this company?',
+  storage_off_warn: 'Files already on S3 will stop being displayed. They stay in the bucket — nothing is deleted.',
+  storage_off_keep: 'To keep them on the server, run this before turning off:',
+  storage_off_keys: 'Do not delete the S3 keys until the copy is done — it needs them.',
+  storage_off_confirm: 'Turn off anyway',
 }

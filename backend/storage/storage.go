@@ -31,6 +31,10 @@ type Store interface {
 	// Stat cho biết dung lượng file. Trả ErrNotFound nếu không có.
 	Stat(ctx context.Context, key string) (size int64, err error)
 
+	// List gọi fn cho từng file có khoá bắt đầu bằng prefix. Dùng callback để
+	// kho lớn không phải nạp hết danh sách vào bộ nhớ. fn trả lỗi thì dừng.
+	List(ctx context.Context, prefix string, fn func(key string, size int64) error) error
+
 	Delete(ctx context.Context, key string) error
 
 	// Kind dùng cho log và thông báo, ví dụ "local" hoặc "s3".
@@ -93,4 +97,3 @@ func validKey(key string) error {
 	}
 	return nil
 }
-

@@ -63,14 +63,21 @@ Chạy trên máy chủ. Xem trước, không đụng gì:
 docker exec cqa-app /app/cqa-server migrate-files
 ```
 
-Lệnh chạy cho mọi công ty đã bật S3, in ra số file trên đĩa, dung lượng và phần còn phải chép.
-Thêm `-tenant <mã công ty>` nếu chỉ muốn làm một công ty.
+Lệnh chạy cho mọi công ty đã bật S3, in ra số file trên máy chủ, dung lượng và phần còn phải
+chép. Thêm `-tenant <mã công ty>` nếu chỉ muốn làm một công ty.
 
 Chép thật:
 
 ```bash
 docker exec cqa-app /app/cqa-server migrate-files -apply
 ```
+
+Lệnh có hai chiều, không ghi gì thì mặc định là chiều lên:
+
+| Lệnh | Chiều |
+|---|---|
+| `migrate-files -up -apply` | Máy chủ → S3 |
+| `migrate-files -down -apply` | S3 → máy chủ |
 
 - Chạy lại bao nhiêu lần cũng được: file đã có trên S3 đúng dung lượng thì bỏ qua
 - Đứt giữa chừng thì chạy lại, nó chép tiếp phần còn thiếu chứ không làm lại từ đầu
@@ -90,13 +97,33 @@ trên S3 và đúng dung lượng — file nào chưa chép được thì không
 
 ## Quay lại lưu trên máy chủ
 
-Tắt công tắc trong **Cài đặt > Lưu trữ file** rồi bấm Lưu.
+Thứ tự đúng, làm theo là không mất gì:
+
+1. **Chép file về trước:**
+   ```bash
+   docker exec cqa-app /app/cqa-server migrate-files -down -apply
+   ```
+2. Kiểm tra vài cuộc chat cũ, ảnh vẫn hiện bình thường
+3. Tắt công tắc trong **Cài đặt > Lưu trữ file**, xác nhận ở hộp thoại
+4. Muốn dọn bucket thì xoá bằng giao diện của nhà cung cấp — CQA cố ý không có lệnh xoá file
+   trên bucket
+
+Tắt trước rồi mới nhớ ra chưa chép cũng không sao: **thông tin S3 được giữ lại** sau khi tắt, nên
+`migrate-files -down -apply` vẫn chạy được bình thường, chép xong là ảnh hiện lại.
 
 ::: warning
-File đã lên S3 trong thời gian bật sẽ **không xem được nữa** sau khi tắt, vì chiều đọc dự phòng
-chỉ đi từ S3 về đĩa chứ không ngược lại. Muốn quay về hẳn thì phải chép file từ bucket về máy chủ
-bằng công cụ của nhà cung cấp trước khi tắt.
+Trong khoảng thời gian đã tắt mà chưa chép về, file nằm trên S3 sẽ **không hiển thị** — chúng vẫn
+nằm nguyên trong bucket, không mất. Đừng xoá khoá S3 trong lúc này, vì chép về cần đúng khoá đó.
 :::
+
+### Tự chép bằng công cụ khác
+
+Ai quen rclone hay aws-cli thì không cần dùng lệnh của CQA. Khoá file trên S3 trùng đúng đường
+dẫn trên máy chủ nên chép thẳng là chạy:
+
+```bash
+rclone copy s3:ten-bucket/<mã công ty>/ /var/lib/cqa/files/<mã công ty>/
+```
 
 ## Ảnh đi đường nào tới trình duyệt
 

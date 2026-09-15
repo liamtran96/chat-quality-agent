@@ -214,3 +214,114 @@ func khoaCo(m *memStore) []string {
 	}
 	return out
 }
+
+func TestChepNguocVeMayChu(t *testing.T) {
+	congTy := "cong-ty-a"
+	src := newMemStore("s3")
+	ctx := context.Background()
+	for k, v := range map[string]string{
+		congTy + "/conv-1/a.jpg":  "anh mot",
+		congTy + "/conv-2/b.png":  "anh hai",
+		"cong-ty-khac/conv/c.gif": "cua cong ty khac, khong duoc dung toi",
+	} {
+		if err := src.Put(ctx, k, stringReader(v), -1, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	dir := t.TempDir()
+
+	// Xem trước: không ghi gì xuống đĩa
+	st, err := MigrateRemoteToLocal(ctx, src, dir, MigrateOptions{KeyPrefix: congTy}, nil)
+	if err != nil {
+		t.Fatalf("loi: %v", err)
+	}
+	if st.Scanned != 2 || st.Copied != 0 {
+		t.Fatalf("xem truoc: quet %d, chep %d — muon quet 2 chep 0", st.Scanned, st.Copied)
+	}
+	if soFile(t, dir) != 0 {
+		t.Errorf("xem truoc khong duoc ghi file nao")
+	}
+
+	// Chép thật
+	st, err = MigrateRemoteToLocal(ctx, src, dir, MigrateOptions{Apply: true, KeyPrefix: congTy}, nil)
+	if err != nil {
+		t.Fatalf("loi: %v", err)
+	}
+	if st.Copied != 2 {
+		t.Fatalf("chep %d file, muon 2", st.Copied)
+	}
+	// Đường dẫn trên đĩa không lặp lại mã công ty
+	noiDung, err := os.ReadFile(filepath.Join(dir, "conv-1", "a.jpg"))
+	if err != nil {
+		t.Fatalf("khong tim thay file da chep: %v", err)
+	}
+	if string(noiDung) != "anh mot" {
+		t.Errorf("noi dung sai: %q", noiDung)
+	}
+	// Không đụng file của công ty khác
+	if soFile(t, dir) != 2 {
+		t.Errorf("chi duoc chep 2 file cua dung cong ty, dang co %d", soFile(t, dir))
+	}
+
+	// Chạy lại không chép thừa
+	st, err = MigrateRemoteToLocal(ctx, src, dir, MigrateOptions{Apply: true, KeyPrefix: congTy}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Copied != 0 || st.AlreadyOK != 2 {
+		t.Errorf("chay lai: chep %d, bo qua %d — muon chep 0 bo qua 2", st.Copied, st.AlreadyOK)
+	}
+
+	// Bucket không bị đụng
+	if len(src.files) != 3 {
+		t.Errorf("chieu xuong khong duoc dong vao bucket, con %d object", len(src.files))
+	}
+}
+
+// Tắt S3 rồi chép về rồi bật lại: không mất file nào, vì khoá hai bên giống hệt.
+func TestDiVaVeKhongMatFile(t *testing.T) {
+	congTy := "cong-ty-a"
+	ctx := context.Background()
+	dir := dungThuMucCoFile(t, map[string]string{
+		congTy + "/conv/a.jpg": "anh goc",
+	})
+	remote := newMemStore("s3")
+
+	// Lên S3 rồi xoá bản trên đĩa
+	if _, err := MigrateLocalToRemote(ctx, remote, filepath.Join(dir, congTy),
+		MigrateOptions{Apply: true, DeleteLocal: true, KeyPrefix: congTy}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if soFile(t, dir) != 0 {
+		t.Fatalf("sau khi len S3 va xoa, dia phai rong")
+	}
+
+	// Chép ngược về
+	st, err := MigrateRemoteToLocal(ctx, remote, filepath.Join(dir, congTy),
+		MigrateOptions{Apply: true, KeyPrefix: congTy}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Copied != 1 {
+		t.Fatalf("chep ve %d file, muon 1", st.Copied)
+	}
+	noiDung, err := os.ReadFile(filepath.Join(dir, congTy, "conv", "a.jpg"))
+	if err != nil {
+		t.Fatalf("file khong quay ve dung cho: %v", err)
+	}
+	if string(noiDung) != "anh goc" {
+		t.Errorf("noi dung sai sau khi di va ve: %q", noiDung)
+	}
+}
+
+func soFile(t *testing.T, dir string) int {
+	t.Helper()
+	n := 0
+	_ = filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			n++
+		}
+		return nil
+	})
+	return n
+}

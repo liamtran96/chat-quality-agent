@@ -157,7 +157,7 @@
             hide-details
             class="mb-2"
             :label="$t('storage_use_s3')"
-            @update:model-value="testResult = null"
+            @update:model-value="onToggleS3"
           />
 
           <v-expand-transition>
@@ -326,6 +326,29 @@
       </v-col>
     </v-row>
 
+    <v-dialog v-model="confirmTatS3" max-width="560">
+      <v-card>
+        <v-card-title class="text-h6">{{ $t('storage_off_title') }}</v-card-title>
+        <v-card-text>
+          <v-alert type="warning" variant="tonal" density="comfortable" class="mb-4">
+            {{ $t('storage_off_warn') }}
+          </v-alert>
+          <div class="text-body-2 mb-2">{{ $t('storage_off_keep') }}</div>
+          <v-sheet color="grey-lighten-4" rounded class="pa-3 mb-2" style="overflow-x: auto">
+            <code class="text-caption text-no-wrap">
+              docker exec cqa-app /app/cqa-server migrate-files -down -apply
+            </code>
+          </v-sheet>
+          <div class="text-body-2 text-grey">{{ $t('storage_off_keys') }}</div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="huyTatS3">{{ $t('cancel') }}</v-btn>
+          <v-btn color="warning" variant="flat" @click="xacNhanTatS3">{{ $t('storage_off_confirm') }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar v-model="snackbar" :color="snackColor" timeout="3000">{{ snackText }}</v-snackbar>
   </div>
 </template>
@@ -365,7 +388,28 @@ const storage = reactive({
   secret_key_da_luu: false,
 })
 const dungS3 = ref(false)
+const confirmTatS3 = ref(false)
 const testResult = ref<{ ok: boolean; message: string } | null>(null)
+
+// Tắt S3 là ảnh đã lưu trên đó thôi hiển thị, nên hỏi lại trước khi cho tắt.
+// Chỉ hỏi khi công ty đang thật sự chạy trên S3, còn bật lên rồi đổi ý ngay
+// thì không có gì để mất.
+function onToggleS3(val: boolean | null) {
+  testResult.value = null
+  if (val === false && storage.backend === 's3') {
+    confirmTatS3.value = true
+  }
+}
+
+function huyTatS3() {
+  confirmTatS3.value = false
+  dungS3.value = true
+}
+
+async function xacNhanTatS3() {
+  confirmTatS3.value = false
+  await saveStorage()
+}
 const storageHost = computed(() => storage.endpoint.replace(/^https?:\/\//, '').replace(/\/$/, ''))
 
 const tabs = [

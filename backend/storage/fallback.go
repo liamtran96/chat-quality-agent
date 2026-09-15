@@ -59,6 +59,22 @@ func (f *fallbackStore) Stat(ctx context.Context, key string) (int64, error) {
 	return f.fallback.Stat(ctx, key)
 }
 
+// List gộp danh sách của cả hai nơi, mỗi khoá chỉ báo một lần.
+func (f *fallbackStore) List(ctx context.Context, prefix string, fn func(key string, size int64) error) error {
+	daThay := map[string]bool{}
+	wrap := func(key string, size int64) error {
+		if daThay[key] {
+			return nil
+		}
+		daThay[key] = true
+		return fn(key, size)
+	}
+	if err := f.primary.List(ctx, prefix, wrap); err != nil {
+		return err
+	}
+	return f.fallback.List(ctx, prefix, wrap)
+}
+
 // Delete xoá ở cả hai nơi: gọi Delete là muốn file biến mất hẳn, còn sót bản
 // trên đĩa thì đường đọc dự phòng sẽ moi nó lên lại.
 func (f *fallbackStore) Delete(ctx context.Context, key string) error {

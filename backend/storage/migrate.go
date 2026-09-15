@@ -194,3 +194,86 @@ func removeEmptyDirs(root string) {
 		_ = os.Remove(dirs[i]) // chỉ xoá được nếu rỗng
 	}
 }
+
+// MigrateRemoteToLocal chép file từ S3 về đĩa máy chủ — lối thoát cho công ty
+// muốn thôi dùng S3.
+//
+// Cùng bảo đảm với chiều đi: chạy lại được, file đã có trên đĩa đúng dung lượng
+// thì bỏ qua, đứt giữa chừng thì lần sau chép tiếp. Cố ý **không** đụng gì tới
+// bucket — xoá dữ liệu ở nơi mình không kiểm soát là việc của chủ bucket.
+func MigrateRemoteToLocal(ctx context.Context, src Store, localDir string, opts MigrateOptions, progress func(st MigrateStats)) (MigrateStats, error) {
+	var st MigrateStats
+
+	dich, err := NewLocal(localDir)
+	if err != nil {
+		return st, err
+	}
+	prefix := strings.TrimSuffix(opts.KeyPrefix, "/")
+
+	err = src.List(ctx, prefix, func(key string, size int64) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		if err := validKey(key); err != nil {
+			st.Failed++
+			return nil
+		}
+
+		st.Scanned++
+		st.BytesTotal += size
+
+		// Khoá trên S3 gồm cả mã công ty; thư mục đích đã là thư mục của công ty
+		// đó nên cắt phần trùng ra.
+		duongDan := key
+		if prefix != "" {
+			duongDan = strings.TrimPrefix(strings.TrimPrefix(key, prefix), "/")
+		}
+		if duongDan == "" {
+			return nil
+		}
+
+		coSan, err := dich.Stat(ctx, duongDan)
+		switch {
+		case err == nil && coSan == size:
+			st.AlreadyOK++
+			return nil
+		case err != nil && !errors.Is(err, ErrNotFound):
+			st.Failed++
+			return nil
+		}
+
+		st.BytesToDo += size
+		if !opts.Apply {
+			return nil
+		}
+
+		body, contentType, _, err := src.Get(ctx, key)
+		if err != nil {
+			st.Failed++
+			return nil
+		}
+		err = dich.Put(ctx, duongDan, body, size, contentType)
+		body.Close()
+		if err != nil {
+			st.Failed++
+			return nil
+		}
+		// Đối chiếu ngay, lệch thì coi như chưa chép.
+		if got, err := dich.Stat(ctx, duongDan); err != nil || got != size {
+			st.Failed++
+			return nil
+		}
+		st.Copied++
+
+		if progress != nil && st.Scanned%100 == 0 {
+			progress(st)
+		}
+		return nil
+	})
+	if err != nil {
+		return st, err
+	}
+	return st, nil
+}

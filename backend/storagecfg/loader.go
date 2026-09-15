@@ -53,10 +53,9 @@ func Load(cfg *config.Config, tenantID string) (storage.Config, error) {
 	if out.Backend == "" {
 		out.Backend = "local"
 	}
-	if out.Backend != "s3" {
-		return out, nil
-	}
-
+	// Nạp thông tin S3 kể cả khi công ty đang ở chế độ máy chủ: nó vẫn cần cho
+	// lệnh chép ngược S3 → máy chủ sau khi đã tắt. Hàm dựng kho chỉ dùng tới
+	// đám này khi Backend là s3.
 	out.S3Endpoint = strings.TrimSpace(get(KeyEndpoint).ValuePlain)
 	out.S3Bucket = strings.TrimSpace(get(KeyBucket).ValuePlain)
 	out.S3Region = strings.TrimSpace(get(KeyRegion).ValuePlain)

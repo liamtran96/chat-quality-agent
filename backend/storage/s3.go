@@ -154,6 +154,30 @@ func (s *s3Store) Stat(ctx context.Context, key string) (int64, error) {
 	return info.Size, nil
 }
 
+func (s *s3Store) List(ctx context.Context, prefix string, fn func(key string, size int64) error) error {
+	full := prefix
+	if s.prefix != "" {
+		full = s.prefix + "/" + prefix
+	}
+	for obj := range s.client.ListObjects(ctx, s.bucket, minio.ListObjectsOptions{Prefix: full, Recursive: true}) {
+		if obj.Err != nil {
+			return translateErr(obj.Err)
+		}
+		key := obj.Key
+		if s.prefix != "" {
+			key = strings.TrimPrefix(key, s.prefix+"/")
+		}
+		// Bỏ qua file do phép kiểm tra kết nối để lại, nếu có sót.
+		if strings.HasPrefix(key, "__cqa_kiem_tra/") {
+			continue
+		}
+		if err := fn(key, obj.Size); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *s3Store) Delete(ctx context.Context, key string) error {
 	name, err := s.objectName(key)
 	if err != nil {

@@ -301,4 +301,9 @@ export default {
   storage_old_files_desc: 'Bật S3 xong, ảnh mới lên S3 còn ảnh cũ vẫn xem được bình thường từ máy chủ. Chuyển chúng lên S3 lúc nào cũng được, không gấp.',
   storage_guide: 'Xem hướng dẫn chuyển file cũ',
   advanced_options: 'Tuỳ chọn nâng cao',
+  storage_off_title: 'Tắt S3 cho công ty này?',
+  storage_off_warn: 'File đã lưu trên S3 sẽ không hiển thị sau khi tắt. Chúng vẫn nằm nguyên trong bucket, không mất.',
+  storage_off_keep: 'Muốn giữ chúng trên máy chủ, chạy lệnh sau trước khi tắt:',
+  storage_off_keys: 'Đừng xoá khoá S3 cho tới khi đã chép xong — chép về cần chính khoá đó.',
+  storage_off_confirm: 'Vẫn tắt',
 }

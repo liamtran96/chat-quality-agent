@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -65,6 +66,26 @@ func (m *memStore) Stat(_ context.Context, key string) (int64, error) {
 		return 0, ErrNotFound
 	}
 	return int64(len(b)), nil
+}
+
+func (m *memStore) List(_ context.Context, prefix string, fn func(string, int64) error) error {
+	m.mu.Lock()
+	keys := make([]string, 0, len(m.files))
+	sizes := map[string]int64{}
+	for k, v := range m.files {
+		if strings.HasPrefix(k, prefix) {
+			keys = append(keys, k)
+			sizes[k] = int64(len(v))
+		}
+	}
+	m.mu.Unlock()
+	sort.Strings(keys)
+	for _, k := range keys {
+		if err := fn(k, sizes[k]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (m *memStore) Delete(_ context.Context, key string) error {

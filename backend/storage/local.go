@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"io/fs"
 	"mime"
 	"os"
 	"path/filepath"
@@ -111,6 +112,41 @@ func (l *localStore) Stat(ctx context.Context, key string) (int64, error) {
 		return 0, err
 	}
 	return st.Size(), nil
+}
+
+func (l *localStore) List(ctx context.Context, prefix string, fn func(key string, size int64) error) error {
+	root := l.baseDir
+	if prefix != "" {
+		if err := validKey(prefix); err != nil {
+			return err
+		}
+		root = filepath.Join(l.baseDir, filepath.FromSlash(prefix))
+	}
+	if _, err := os.Stat(root); os.IsNotExist(err) {
+		return nil
+	}
+	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !d.Type().IsRegular() {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		rel, err := filepath.Rel(l.baseDir, p)
+		if err != nil {
+			return err
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		return fn(filepath.ToSlash(rel), info.Size())
+	})
 }
 
 func (l *localStore) Delete(ctx context.Context, key string) error {
