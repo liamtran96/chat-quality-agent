@@ -20,15 +20,36 @@ jobs:
         id: version
         run: |
           TODAY=$(date -u +%Y.%m.%d)
-          # Count existing tags for today to handle multiple releases
-          COUNT=$(git tag -l "v${TODAY}*" | wc -l | tr -d ' ')
-          if [ "$COUNT" -eq "0" ]; then
+          # Lấy hậu tố lớn nhất hiện có rồi cộng 1. Cố ý không đếm số tag:
+          # thiếu tag gốc hoặc có tag bị xoá là số đếm ra trùng tag đã tồn tại,
+          # và vì bước build chạy trước bước tạo tag nên image sẽ bị đẩy lên
+          # đè phiên bản cũ trước khi lỗi lộ ra.
+          MAX=0
+          for tag in $(git tag -l "v${TODAY}" "v${TODAY}.*"); do
+            suffix=${tag#v${TODAY}}
+            suffix=${suffix#.}
+            n=${suffix:-1}
+            case "$n" in
+              ''|*[!0-9]*) continue ;;
+            esac
+            [ "$n" -gt "$MAX" ] && MAX=$n
+          done
+          if [ "$MAX" -eq "0" ]; then
             VERSION="${TODAY}"
           else
-            VERSION="${TODAY}.$((COUNT + 1))"
+            VERSION="${TODAY}.$((MAX + 1))"
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "=== Version: v${VERSION} ==="
+
+      # Chặn ngay tại đây, trước khi build, để không đẩy image đè lên một
+      # phiên bản đã phát hành.
+      - name: Ensure tag is free
+        run: |
+          if git rev-parse -q --verify "refs/tags/v${{ steps.version.outputs.version }}" >/dev/null; then
+            echo "::error::tag v${{ steps.version.outputs.version }} đã tồn tại, dừng trước khi build"
+            exit 1
+          fi
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
