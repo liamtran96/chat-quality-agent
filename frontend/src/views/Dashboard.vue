@@ -110,7 +110,7 @@
           <div class="d-flex justify-space-between align-center">
             <div>
               <div class="text-body-2 text-grey">{{ $t('ai_cost') }}</div>
-              <div class="text-h5 font-weight-bold mt-1">{{ Math.round(costToday * exchangeRate).toLocaleString('vi-VN') }}đ</div>
+              <div class="text-h5 font-weight-bold mt-1">{{ Math.round(costPeriod * exchangeRate).toLocaleString('vi-VN') }}đ</div>
             </div>
             <v-icon color="warning" size="32" class="opacity-50">mdi-currency-usd</v-icon>
           </div>
@@ -259,7 +259,7 @@ const tenantId = computed(() => route.params.tenantId as string)
 
 const stats = ref([
   { label: 'total_conversations', value: 0, icon: 'mdi-message-text', color: 'primary' },
-  { label: 'issues_today', value: 0, icon: 'mdi-alert-circle', color: 'error' },
+  { label: 'issues', value: 0, icon: 'mdi-alert-circle', color: 'error' },
   { label: 'active_jobs', value: 0, icon: 'mdi-briefcase-check', color: 'success' },
   { label: 'active_channels', value: 0, icon: 'mdi-connection', color: 'info' },
 ])
@@ -275,6 +275,7 @@ const recentActivity = computed(() => {
     .slice(0, 10)
 })
 
+const costPeriod = ref(0)
 const costToday = ref(0)
 const costMonth = ref(0)
 const costByDay = ref<any[]>([])
@@ -420,10 +421,11 @@ async function loadDashboard() {
 
     const { data } = await api.get(`/tenants/${tenantId.value}/dashboard`, { params })
     stats.value[0].value = data.total_conversations
-    stats.value[1].value = data.issues_today
+    stats.value[1].value = data.issues
     stats.value[2].value = data.active_jobs
     stats.value[3].value = data.active_channels
 
+    costPeriod.value = data.cost_period || 0
     costToday.value = data.cost_today || 0
     costMonth.value = data.cost_this_month || 0
     costByDay.value = data.cost_by_day || []

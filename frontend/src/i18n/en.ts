@@ -98,7 +98,7 @@ export default {
   // Dashboard
   dashboard: 'Dashboard',
   total_conversations: 'Total Conversations',
-  issues_today: 'Issues Today',
+  issues: 'Issues',
   active_jobs: 'Active Jobs',
   active_channels: 'Active Channels',
   recent_alerts: 'Recent Alerts',

@@ -98,7 +98,7 @@ export default {
   // Dashboard
   dashboard: 'Trang chủ',
   total_conversations: 'Tổng hội thoại',
-  issues_today: 'Vấn đề hôm nay',
+  issues: 'Vấn đề',
   active_jobs: 'Công việc đang chạy',
   active_channels: 'Kênh hoạt động',
   recent_alerts: 'Cảnh báo gần đây',

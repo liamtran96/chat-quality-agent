@@ -37,9 +37,9 @@ func GetDashboard(c *gin.Context) {
 	db.DB.Model(&models.Job{}).Where("tenant_id = ? AND is_active = true", tenantID).Count(&activeJobs)
 
 	// Time-dependent stats
-	var totalConversations, issuesToday int64
+	var totalConversations, issuesInPeriod int64
 	db.DB.Model(&models.Conversation{}).Where("tenant_id = ? AND last_message_at BETWEEN ? AND ?", tenantID, from, to).Count(&totalConversations)
-	db.DB.Model(&models.JobResult{}).Where("tenant_id = ? AND created_at BETWEEN ? AND ?", tenantID, from, to).Count(&issuesToday)
+	db.DB.Model(&models.JobResult{}).Where("tenant_id = ? AND created_at BETWEEN ? AND ?", tenantID, from, to).Count(&issuesInPeriod)
 
 	// Conversations by channel type
 	type ChannelCount struct {
@@ -75,6 +75,12 @@ func GetDashboard(c *gin.Context) {
 	var costPeriod float64
 	db.DB.Model(&models.AIUsageLog{}).Where("tenant_id = ? AND created_at BETWEEN ? AND ?", tenantID, from, to).
 		Select("COALESCE(SUM(cost_usd), 0)").Scan(&costPeriod)
+
+	// Chi phí hôm nay tính riêng, không phụ thuộc khoảng thời gian đang lọc — nếu
+	// dùng chung một con số thì lọc 28 ngày sẽ ra "hôm nay" lớn hơn "tháng này".
+	var costToday float64
+	db.DB.Model(&models.AIUsageLog{}).Where("tenant_id = ? AND created_at >= ?", tenantID, today).
+		Select("COALESCE(SUM(cost_usd), 0)").Scan(&costToday)
 
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	var costMonth float64
@@ -129,11 +135,12 @@ func GetDashboard(c *gin.Context) {
 		"total_conversations":      totalConversations,
 		"active_channels":          activeChannels,
 		"active_jobs":              activeJobs,
-		"issues_today":             issuesToday,
+		"issues":                   issuesInPeriod,
 		"conversations_by_channel": channelCounts,
 		"qc_alerts":                qcAlerts,
 		"classification_recent":    classRecent,
-		"cost_today":               costPeriod,
+		"cost_period":              costPeriod,
+		"cost_today":               costToday,
 		"cost_this_month":          costMonth,
 		"cost_by_day":              costByDay,
 		"messages_by_day":          messagesByDay,

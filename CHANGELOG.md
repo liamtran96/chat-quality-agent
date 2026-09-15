@@ -7,6 +7,7 @@
 - **Script `scripts/reset-password.sh`**: làm việc tương tự cho bản cài chưa cập nhật, tự chuyển sang dùng lệnh trong ứng dụng nếu bản cài đã có
 
 ### Sửa lỗi
+- **Chi phí và số vấn đề trên trang chủ hiển thị sai ý nghĩa**: thẻ "Chi phí hôm nay" thực ra cộng chi phí của cả khoảng thời gian đang lọc nên lọc 28 ngày sẽ ra con số lớn hơn "Chi phí tháng này", trông như hai ô bị đảo chỗ. Nay chi phí hôm nay tính riêng từ 0 giờ, thẻ trên cùng đổi thành chi phí theo khoảng đang lọc. Thẻ "Vấn đề hôm nay" cũng lọc theo khoảng thời gian chứ không riêng hôm nay nên đổi tên thành "Vấn đề"
 - **Nút kiểm tra API key không kiểm tra gì** (#51): nút "Kiểm tra API Key" chỉ xem trong database có key hay không rồi báo xanh, không hề gọi tới Claude hay Gemini. Key sai, bị thu hồi hay hết hạn mức vẫn hiện "API key configured", người dùng chỉ phát hiện khi công việc chạy thật mà không ra kết quả. Nay nút này gọi thật một lượt tới nhà cung cấp và báo đúng lý do khi hỏng
 - **Phải nhập lại API key mỗi lần đổi cấu hình AI** (#11): ô key hiển thị dấu chấm khi đã lưu, nhưng lưu cài đặt lại bắt nhập key thật nên chỉ muốn đổi model cũng phải dán key vào lại, dễ tưởng là key bị mất. Nay để nguyên ô đó thì key cũ được giữ
 - **Không biết khi khoá mã hoá bị đổi**: đổi `ENCRYPTION_KEY` trong `.env` làm API key và thông tin kết nối kênh đã lưu không giải mã được, nhưng giao diện vẫn hiện như đã cấu hình xong. Nay báo rõ lý do và cách khắc phục
@@ -17,6 +18,7 @@
 - **Chứng chỉ hết hạn không tự cấp lại**: chứng chỉ để quá hạn lâu thì lệnh gia hạn bị Let's Encrypt từ chối vì bản cũ đã bị xoá khỏi hệ thống, mà luồng khởi động lại chỉ biết gia hạn nên kẹt vĩnh viễn — nay tự chuyển sang cấp mới khi gia hạn hỏng
 
 ### Tài liệu
+- **Trang chủ**: nói rõ thẻ nào đổi theo bộ lọc thời gian, thẻ nào cố định theo ngày và theo tháng
 - **Cấu hình AI**: bổ sung bảng ý nghĩa từng thông báo của nút Kiểm tra API Key, và mục xử lý khi khoá mã hoá bị đổi
 - **Hướng dẫn MCP** (#49): tách rõ hai trường hợp file cấu hình Claude Desktop rỗng và đã có sẵn nội dung — trước đây chỉ đưa một khối JSON hoàn chỉnh nên nhiều người dán thêm vào file có sẵn, thành hai khối JSON nối nhau và Claude Desktop báo lỗi không đọc được
 - **Quên mật khẩu admin**: viết lại mục trong FAQ — hướng dẫn cũ dùng `-u root -p$MYSQL_ROOT_PASSWORD` trong khi biến này không tồn tại ở shell của host nên chạy sẽ tắc, lại thiếu hẳn bước sinh mã hoá mật khẩu và gợi ý "thêm admin mới qua API" vốn không thực hiện được khi chưa đăng nhập được. Bổ sung cách xử lý khi bị khoá do đăng nhập sai 5 lần

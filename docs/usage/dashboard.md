@@ -8,10 +8,12 @@ Dashboard là trang tổng quan khi bạn vào 1 công ty. Hiển thị các ch�
 
 | Thẻ | Ý nghĩa |
 |-----|---------|
-| **Tổng cuộc hội thoại** | Tổng số cuộc chat đã đồng bộ |
-| **Vấn đề hôm nay** | Số vi phạm CSKH phát hiện trong ngày |
+| **Tổng cuộc hội thoại** | Số cuộc chat trong khoảng thời gian đang chọn |
+| **Vấn đề** | Số vi phạm CSKH phát hiện trong khoảng thời gian đang chọn |
 | **Công việc đang chạy** | Số công việc đang thực thi |
 | **Kênh hoạt động** | Số kênh chat đang kết nối |
+
+Bốn thẻ này, trừ hai thẻ cuối, thay đổi theo bộ lọc thời gian ở đầu trang.
 
 ## Thống kê kênh
 
@@ -19,7 +21,7 @@ Hiển thị số cuộc hội thoại theo từng loại kênh:
 - Zalo OA: số cuộc chat
 - Facebook: số cuộc chat
 - Tổng tin nhắn
-- Chi phí AI hôm nay (VND)
+- Chi phí AI trong khoảng thời gian đang chọn (VND)
 
 ## Hoạt động gần đây
 
@@ -38,8 +40,11 @@ Danh sách các cảnh báo QC và kết quả phân loại mới nhất:
 
 ## Chi phí AI
 
-- **Chi phí hôm nay**: Tổng chi phí AI trong ngày (VND)
-- **Chi phí tháng này**: Tổng chi phí trong tháng
+- **Chi phí hôm nay**: Tổng chi phí AI từ 0 giờ hôm nay (VND) — không đổi theo bộ lọc thời gian
+- **Chi phí tháng này**: Tổng chi phí từ ngày 1 của tháng — không đổi theo bộ lọc thời gian
+
+Thẻ **Chi phí AI** ở khu vực trên cùng thì ngược lại, nó tính theo khoảng thời gian
+đang chọn, nên thường lớn hơn hai con số này khi bạn lọc nhiều ngày.
 - **Bảng chi phí 7 ngày gần nhất**: Ngày, số token (input + output), chi phí VND
 
 ## Biểu đồ
