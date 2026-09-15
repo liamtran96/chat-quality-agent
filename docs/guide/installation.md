@@ -118,9 +118,58 @@ docker exec -it cqa-app /app/cqa-server reset-password
 
 # Xem phiên bản đang chạy
 docker exec cqa-app /app/cqa-server version
+
+# Xem trước số bản đánh giá trùng cần dọn (không xoá gì)
+docker exec cqa-app /app/cqa-server prune-duplicate-results
+
+# Dọn thật — sao lưu trước đã
+docker exec -it cqa-app /app/cqa-server prune-duplicate-results -apply
 ```
 
 Chi tiết về đặt lại mật khẩu xem [Quên mật khẩu admin](/faq#quen-mat-khau-admin).
+
+## Sao lưu database
+
+```bash
+bash scripts/backup-db.sh
+```
+
+Script dump toàn bộ database ra `/opt/cqa/backups`, rồi **phục hồi thử sang một database
+tạm và đối chiếu số dòng từng bảng** với bản đang chạy. Lệch một dòng là script báo lỗi và
+dừng. Một file dump chưa phục hồi thử thì chưa gọi là bản sao lưu.
+
+Database tạm do chính script tạo ra (tên `cqa_verify_<dấu thời gian>`) được xoá khi xong;
+thêm `--keep-verify` nếu muốn giữ lại để tự xem. Dữ liệu đang chạy chỉ được đọc.
+
+Phục hồi khi cần:
+
+```bash
+gunzip -c /opt/cqa/backups/cqa-<dấu thời gian>.sql.gz | docker exec -i cqa-db mysql -uroot -p cqa
+```
+
+## Dọn bản đánh giá trùng
+
+Các bản CQA trước v2026.09.15.6 có lỗi khiến công việc chạy theo lịch đánh giá lại cuộc chat
+cũ mỗi ngày. Lỗi đã sửa, nhưng dữ liệu trùng sinh ra từ trước vẫn nằm lại: database phình to
+và số liệu trên Trang chủ bị thổi phồng.
+
+Kiểm tra xem bản cài của bạn có dính không:
+
+```bash
+docker exec cqa-app /app/cqa-server prune-duplicate-results
+```
+
+Lệnh chỉ in bản kê, không xoá gì. Nếu có dữ liệu trùng thì:
+
+1. Sao lưu: `bash scripts/backup-db.sh`
+2. Dọn: `docker exec -it cqa-app /app/cqa-server prune-duplicate-results -apply` — gõ `XOA` để xác nhận
+3. Trả lại dung lượng đĩa, chạy ngoài giờ vì thao tác này khoá bảng vài phút:
+   `docker exec cqa-db mysql -uroot -p -e "OPTIMIZE TABLE cqa.job_results;"`
+
+Quy tắc giữ lại: mỗi cặp (công việc, cuộc chat) giữ nguyên toàn bộ kết quả của **lượt chạy gần
+nhất**, xoá các lượt cũ hơn. Lệnh chỉ đụng tới bảng `job_results` — tin nhắn, cuộc chat, lượt
+chạy và cấu hình không bị chạm tới. Lệnh từ chối chạy khi còn công việc đang chạy dở, và sau khi
+xoá sẽ tự đối chiếu lại số dòng lẫn số cặp, lệch là báo lỗi.
 
 ## Gỡ cài đặt
 

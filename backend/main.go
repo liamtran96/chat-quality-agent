@@ -84,12 +84,18 @@ func runCommand(name string, args []string) {
 			fmt.Fprintf(os.Stderr, "Lỗi: %v\n", err)
 			os.Exit(1)
 		}
+	case "prune-duplicate-results":
+		if err := cli.PruneDuplicateResults(args); err != nil {
+			fmt.Fprintf(os.Stderr, "Lỗi: %v\n", err)
+			os.Exit(1)
+		}
 	case "version":
 		fmt.Println(version)
 	default:
 		fmt.Fprintf(os.Stderr, "Lệnh không hợp lệ: %s\n\n", name)
 		fmt.Fprintln(os.Stderr, "Các lệnh có sẵn:")
 		fmt.Fprintln(os.Stderr, "  reset-password [-email EMAIL]   Đặt lại mật khẩu một tài khoản")
+		fmt.Fprintln(os.Stderr, "  prune-duplicate-results [-apply] Dọn bản đánh giá trùng, giữ lượt chạy mới nhất")
 		fmt.Fprintln(os.Stderr, "  version                         In phiên bản")
 		fmt.Fprintln(os.Stderr, "\nChạy không kèm lệnh để khởi động web server.")
 		os.Exit(1)

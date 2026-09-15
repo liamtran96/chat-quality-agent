@@ -3,6 +3,8 @@
 ## v2026.09.15
 
 ### Tính năng mới
+- **Lệnh dọn bản đánh giá trùng**: `prune-duplicate-results` giữ lại kết quả của lượt chạy gần nhất mỗi cặp (công việc, cuộc chat) và xoá các lượt cũ hơn, dành cho bản cài đã tích dữ liệu trùng từ lỗi đánh giá lặp. Mặc định chỉ in bản kê, phải thêm `-apply` và gõ xác nhận mới xoá; từ chối chạy khi còn công việc đang chạy dở; xoá xong tự đối chiếu lại số dòng và số cặp. Chỉ đụng tới bảng `job_results`
+- **Script sao lưu tự kiểm chứng**: `scripts/backup-db.sh` dump toàn bộ database rồi phục hồi thử sang database tạm và đối chiếu số dòng từng bảng, lệch một dòng là dừng và báo lỗi. Database tạm tự xoá sau khi kiểm xong, dữ liệu đang chạy chỉ được đọc
 - **Danh sách model gọn lại**: bỏ hai mục gắn nhãn CLIProxy khỏi danh sách có sẵn. Ai dùng proxy nay điền URL rồi bấm làm mới để lấy đúng danh sách model của proxy mình, không phải chọn từ danh sách đoán trước. Model đang dùng vẫn được giữ nguyên
 - **Thêm ChatGPT (OpenAI) và Grok (xAI)**: hai nhà cung cấp mới bên cạnh Claude và Gemini, dùng chung một bộ kết nối theo chuẩn OpenAI nên mục Tùy chỉnh API URL cũng chạy được với OpenRouter, LiteLLM hay máy chủ tự dựng theo chuẩn đó
 - **Danh sách model tự cập nhật**: ô chọn model nay lấy trực tiếp từ nhà cung cấp bằng API key của tenant, lưu lại và làm mới mỗi ngày, kèm nút làm mới thủ công. Model mới ra không cần chờ bản phát hành CQA. Model đang dùng luôn được giữ trong danh sách kể cả khi nhà cung cấp đã gỡ, để không mất lựa chọn đang có
@@ -26,6 +28,7 @@
 - **Chứng chỉ hết hạn không tự cấp lại**: chứng chỉ để quá hạn lâu thì lệnh gia hạn bị Let's Encrypt từ chối vì bản cũ đã bị xoá khỏi hệ thống, mà luồng khởi động lại chỉ biết gia hạn nên kẹt vĩnh viễn — nay tự chuyển sang cấp mới khi gia hạn hỏng
 
 ### Tài liệu
+- **Cài đặt**: thêm mục sao lưu database và mục dọn bản đánh giá trùng, kèm các bước làm theo thứ tự
 - **Công việc**: bổ sung cách hoạt động của lần chạy tự động (không đánh giá lại cuộc chat cũ) và bảng ý nghĩa các trạng thái lần chạy
 - **Cấu hình AI**: bổ sung bảng model và giá của ChatGPT, Grok, kèm ghi chú về dùng proxy
 - **Cấu hình AI**: hướng dẫn cơ chế danh sách model tự cập nhật và nút làm mới
