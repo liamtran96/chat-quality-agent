@@ -12,6 +12,12 @@ const validTenantIds = new Set<string>()
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    // Wireframe: trang tĩnh để duyệt bố cục trước khi code thật. Không gọi API.
+    {
+      path: '/wireframes/storage-settings',
+      name: 'wf-storage-settings',
+      component: () => import('../wireframes/StorageSettings.vue'),
+    },
     {
       path: '/setup',
       name: 'setup',
