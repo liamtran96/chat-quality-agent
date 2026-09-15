@@ -48,10 +48,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '../api'
 import { markSetupComplete } from '../router'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const email = ref('')
 const name = ref('')
@@ -73,12 +74,7 @@ async function handleSetup() {
 
   loading.value = true
   try {
-    const { data } = await api.post('/setup', {
-      email: email.value,
-      password: password.value,
-      name: name.value || undefined,
-    })
-    localStorage.setItem('cqa_access_token', data.access_token)
+    await authStore.setup(name.value, email.value, password.value)
     markSetupComplete()
     router.push('/')
   } catch (err: any) {

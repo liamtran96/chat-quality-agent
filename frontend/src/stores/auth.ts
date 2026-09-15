@@ -56,6 +56,16 @@ export const useAuthStore = defineStore('auth', () => {
     await fetchProfile()
   }
 
+  // Tạo tài khoản quản trị đầu tiên. Phải nạp hồ sơ ngay tại đây: sau bước này
+  // ứng dụng chuyển trang trong SPA nên App.vue không mount lại, không có chỗ
+  // nào khác nạp hồ sơ, và giao diện sẽ coi như chưa biết người dùng là admin.
+  async function setup(name: string, email: string, password: string) {
+    const { data } = await api.post('/setup', { email, password, name: name || undefined })
+    accessToken.value = data.access_token
+    localStorage.setItem('cqa_access_token', data.access_token)
+    await fetchProfile()
+  }
+
   async function register(name: string, email: string, password: string) {
     const { data } = await api.post('/auth/register', { name, email, password })
     accessToken.value = data.access_token
@@ -83,5 +93,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('cqa_refresh_token') // cleanup legacy
   }
 
-  return { user, accessToken, isAuthenticated, tenantPerms, canView, canEdit, fetchTenantPermissions, login, register, fetchProfile, updateProfile, logout }
+  return { user, accessToken, isAuthenticated, tenantPerms, canView, canEdit, fetchTenantPermissions, login, setup, register, fetchProfile, updateProfile, logout }
 })

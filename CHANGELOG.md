@@ -7,6 +7,7 @@
 - **Script `scripts/reset-password.sh`**: làm việc tương tự cho bản cài chưa cập nhật, tự chuyển sang dùng lệnh trong ứng dụng nếu bản cài đã có
 
 ### Sửa lỗi
+- **Không có nút thêm công ty sau khi cài đặt** (#50): tạo tài khoản quản trị xong thì vào thẳng màn hình trống, không thao tác được gì. Màn hình cài đặt lưu phiên nhưng chưa nạp hồ sơ người dùng, mà bước sau lại chuyển trang trong ứng dụng nên không còn chỗ nào nạp — giao diện coi như chưa biết người dùng là quản trị viên và ẩn hết nút. Tải lại trang hoặc đăng nhập lại thì hết, nên lỗi chỉ xuất hiện đúng lần cài đầu tiên
 - **Đăng nhập sai không hiện thông báo**: bấm đăng nhập với mật khẩu sai thì trang chỉ nháy một cái rồi về lại như cũ, không báo gì. Bộ chặn lỗi hiểu nhầm 401 của trang đăng nhập thành hết hạn phiên nên đi làm mới phiên, hỏng tiếp rồi tải lại trang, xoá luôn dòng thông báo. Nay 401 từ các endpoint đăng nhập được để nguyên cho màn hình tự xử lý
 - **Báo nhầm khi tài khoản bị khoá**: đăng nhập sai 5 lần bị khoá 15 phút nhưng màn hình vẫn báo "Email hoặc mật khẩu không đúng" nên không hiểu vì sao gõ đúng vẫn không vào được — nay hiện đúng lý do và thời gian mở khoá
 - **Gia hạn SSL thất bại im lặng**: `/.well-known/acme-challenge/` nay luôn mở cho Let's Encrypt kể cả khi nginx bị giới hạn theo IP — trước đó việc xác minh trả 403 nên chứng chỉ hết hạn dù vòng lặp gia hạn vẫn chạy đều. Gia hạn hỏng cũng ghi cảnh báo rõ vào log thay vì im lặng
