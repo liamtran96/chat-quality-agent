@@ -1,11 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/vietbui/chat-quality-agent/api"
 	"github.com/vietbui/chat-quality-agent/api/handlers"
 	"github.com/vietbui/chat-quality-agent/api/middleware"
+	"github.com/vietbui/chat-quality-agent/cli"
 	"github.com/vietbui/chat-quality-agent/config"
 	"github.com/vietbui/chat-quality-agent/db"
 	"github.com/vietbui/chat-quality-agent/engine"
@@ -14,6 +17,12 @@ import (
 var version = "dev"
 
 func main() {
+	// Lệnh quản trị chạy trực tiếp trên server, không khởi động web server.
+	if len(os.Args) > 1 {
+		runCommand(os.Args[1], os.Args[2:])
+		return
+	}
+
 	log.Printf("Chat Quality Agent %s", version)
 	handlers.AppVersion = version
 
@@ -53,5 +62,25 @@ func main() {
 	log.Printf("CQA server starting on %s (env: %s)", cfg.ListenAddr(), cfg.Env)
 	if err := router.Run(cfg.ListenAddr()); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
+	}
+}
+
+// runCommand chạy một lệnh quản trị rồi thoát.
+func runCommand(name string, args []string) {
+	switch name {
+	case "reset-password":
+		if err := cli.ResetPassword(args); err != nil {
+			fmt.Fprintf(os.Stderr, "Lỗi: %v\n", err)
+			os.Exit(1)
+		}
+	case "version":
+		fmt.Println(version)
+	default:
+		fmt.Fprintf(os.Stderr, "Lệnh không hợp lệ: %s\n\n", name)
+		fmt.Fprintln(os.Stderr, "Các lệnh có sẵn:")
+		fmt.Fprintln(os.Stderr, "  reset-password [-email EMAIL]   Đặt lại mật khẩu một tài khoản")
+		fmt.Fprintln(os.Stderr, "  version                         In phiên bản")
+		fmt.Fprintln(os.Stderr, "\nChạy không kèm lệnh để khởi động web server.")
+		os.Exit(1)
 	}
 }

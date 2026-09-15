@@ -1,5 +1,14 @@
 # Changelog
 
+## v2026.09.15
+
+### Tính năng mới
+- **Lệnh đặt lại mật khẩu từ dòng lệnh**: `docker exec -it cqa-app /app/cqa-server reset-password` — liệt kê tài khoản, nhập mật khẩu ẩn, tự kiểm tra độ mạnh và thu hồi toàn bộ phiên đăng nhập cũ. Dùng khi admin duy nhất quên mật khẩu. Chỉ chạy được trên server, không có đường gọi qua web
+- **Script `scripts/reset-password.sh`**: làm việc tương tự cho bản cài chưa cập nhật, tự chuyển sang dùng lệnh trong ứng dụng nếu bản cài đã có
+
+### Tài liệu
+- **Quên mật khẩu admin**: viết lại mục trong FAQ — hướng dẫn cũ dùng `-u root -p$MYSQL_ROOT_PASSWORD` trong khi biến này không tồn tại ở shell của host nên chạy sẽ tắc, lại thiếu hẳn bước sinh mã hoá mật khẩu và gợi ý "thêm admin mới qua API" vốn không thực hiện được khi chưa đăng nhập được. Bổ sung cách xử lý khi bị khoá do đăng nhập sai 5 lần
+
 ## v2026.03.30
 
 ### Tính năng mới

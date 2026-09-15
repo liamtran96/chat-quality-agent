@@ -60,6 +60,9 @@ Admin/Owner có thể reset mật khẩu cho user khác:
 
 User sẽ bị đăng xuất khỏi tất cả thiết bị và phải đăng nhập lại bằng mật khẩu mới.
 
+Nếu là admin duy nhất và chính mình quên mật khẩu, không ai reset giúp được, xem
+[Quên mật khẩu admin](/faq#quen-mat-khau-admin) để đặt lại từ dòng lệnh trên server.
+
 ## Đổi mật khẩu của chính mình
 
 Vào menu **Cài đặt** > tab **Đổi mật khẩu**:

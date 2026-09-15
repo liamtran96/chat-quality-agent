@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"fmt"
 	"log"
 	"net/http"
-	"regexp"
 	"sync"
 	"time"
 
@@ -13,6 +11,7 @@ import (
 	"github.com/vietbui/chat-quality-agent/db"
 	"github.com/vietbui/chat-quality-agent/db/models"
 	"github.com/vietbui/chat-quality-agent/pkg"
+	"github.com/vietbui/chat-quality-agent/pkg/password"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -66,22 +65,10 @@ func clearFailedLogin(key string) {
 	delete(failedAttempts, key)
 }
 
-// Password complexity: min 8 chars, at least 1 uppercase, 1 digit
-var passwordRegex = regexp.MustCompile(`^.{8,}$`)
-var hasUpper = regexp.MustCompile(`[A-Z]`)
-var hasDigit = regexp.MustCompile(`[0-9]`)
-
+// Password complexity: min 8 chars, at least 1 uppercase, 1 digit.
+// Luật nằm ở pkg/password để CLI reset-password dùng chung, không bị lệch.
 func validatePasswordComplexity(pw string) error {
-	if !passwordRegex.MatchString(pw) {
-		return fmt.Errorf("Mật khẩu phải có ít nhất 8 ký tự")
-	}
-	if !hasUpper.MatchString(pw) {
-		return fmt.Errorf("Mật khẩu phải có ít nhất 1 chữ hoa")
-	}
-	if !hasDigit.MatchString(pw) {
-		return fmt.Errorf("Mật khẩu phải có ít nhất 1 chữ số")
-	}
-	return nil
+	return password.ValidateComplexity(pw)
 }
 
 type LoginRequest struct {

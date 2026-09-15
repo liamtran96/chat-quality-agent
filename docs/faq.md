@@ -129,14 +129,41 @@ docker compose logs nginx --tail=20
 
 ### Quên mật khẩu admin
 
-Nếu là admin duy nhất và quên mật khẩu, cần reset trực tiếp trong database:
+Nếu còn tài khoản khác có quyền owner hoặc admin trong workspace, nhờ người đó
+vào **Cài đặt > Người dùng** đặt lại mật khẩu giúp là nhanh nhất.
+
+Nếu là admin duy nhất, chạy lệnh sau trên chính server đang cài CQA:
 
 ```bash
-cd /opt/cqa
-docker compose exec db mysql -u root -p$MYSQL_ROOT_PASSWORD cqa
-
-# Trong MySQL:
-UPDATE users SET password_hash = '$2a$10$...' WHERE email = 'admin@example.com';
+docker exec -it cqa-app /app/cqa-server reset-password
 ```
 
-Tốt hơn: Thêm admin mới qua API hoặc liên hệ người có quyền Owner để reset.
+Lệnh sẽ liệt kê các tài khoản hiện có, hỏi email cần đặt lại, rồi hỏi mật khẩu
+mới hai lần (không hiện khi gõ). Đặt xong là đăng nhập lại được ngay, và toàn bộ
+phiên đăng nhập cũ bị thu hồi.
+
+Biết sẵn email thì bỏ qua bước chọn:
+
+```bash
+docker exec -it cqa-app /app/cqa-server reset-password -email admin@example.com
+```
+
+Lệnh này chỉ chạy được từ dòng lệnh trên server, không có đường gọi qua web.
+
+**Bản cài cũ chưa có lệnh trên**
+
+Cập nhật CQA lên bản mới nhất là có. Nếu chưa muốn cập nhật, dùng script:
+
+```bash
+curl -sfLO https://raw.githubusercontent.com/tanviet12/chat-quality-agent/main/scripts/reset-password.sh
+bash reset-password.sh
+```
+
+**Đăng nhập sai nhiều lần bị khoá**
+
+Sai 5 lần liên tiếp sẽ bị khoá 15 phút. Trạng thái khoá giữ trong bộ nhớ nên khởi
+động lại ứng dụng là mở khoá ngay:
+
+```bash
+docker restart cqa-app
+```
