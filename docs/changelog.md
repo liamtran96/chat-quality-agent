@@ -7,6 +7,8 @@
 - **Script `scripts/reset-password.sh`**: làm việc tương tự cho bản cài chưa cập nhật, tự chuyển sang dùng lệnh trong ứng dụng nếu bản cài đã có
 
 ### Sửa lỗi
+- **Đăng nhập sai không hiện thông báo**: bấm đăng nhập với mật khẩu sai thì trang chỉ nháy một cái rồi về lại như cũ, không báo gì. Bộ chặn lỗi hiểu nhầm 401 của trang đăng nhập thành hết hạn phiên nên đi làm mới phiên, hỏng tiếp rồi tải lại trang, xoá luôn dòng thông báo. Nay 401 từ các endpoint đăng nhập được để nguyên cho màn hình tự xử lý
+- **Báo nhầm khi tài khoản bị khoá**: đăng nhập sai 5 lần bị khoá 15 phút nhưng màn hình vẫn báo "Email hoặc mật khẩu không đúng" nên không hiểu vì sao gõ đúng vẫn không vào được — nay hiện đúng lý do và thời gian mở khoá
 - **Gia hạn SSL thất bại im lặng**: `/.well-known/acme-challenge/` nay luôn mở cho Let's Encrypt kể cả khi nginx bị giới hạn theo IP — trước đó việc xác minh trả 403 nên chứng chỉ hết hạn dù vòng lặp gia hạn vẫn chạy đều. Gia hạn hỏng cũng ghi cảnh báo rõ vào log thay vì im lặng
 - **Chứng chỉ hết hạn không tự cấp lại**: chứng chỉ để quá hạn lâu thì lệnh gia hạn bị Let's Encrypt từ chối vì bản cũ đã bị xoá khỏi hệ thống, mà luồng khởi động lại chỉ biết gia hạn nên kẹt vĩnh viễn — nay tự chuyển sang cấp mới khi gia hạn hỏng
 

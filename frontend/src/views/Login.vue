@@ -50,8 +50,16 @@ async function handleLogin() {
   try {
     await authStore.login(email.value, password.value)
     router.push('/')
-  } catch {
-    errorMsg.value = t('invalid_credentials')
+  } catch (err: any) {
+    const status = err?.response?.status
+    if (status === 429) {
+      // Backend đã soạn sẵn câu thông báo kèm thời gian mở khoá
+      errorMsg.value = err.response?.data?.message || t('account_locked')
+    } else if (status === 401) {
+      errorMsg.value = t('invalid_credentials')
+    } else {
+      errorMsg.value = t('login_failed')
+    }
   } finally {
     loading.value = false
   }

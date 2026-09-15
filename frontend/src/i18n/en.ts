@@ -32,6 +32,8 @@ export default {
   login_title: 'Sign in to your account',
   register_title: 'Create a new account',
   invalid_credentials: 'Invalid email or password',
+  account_locked: 'Account temporarily locked after too many failed attempts. Please try again in 15 minutes.',
+  login_failed: 'Could not sign in, please try again',
   email_already_exists: 'Email already exists',
 
   // Navigation

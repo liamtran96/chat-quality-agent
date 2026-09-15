@@ -17,11 +17,25 @@ api.interceptors.request.use((config) => {
 // Shared refresh promise to prevent multiple concurrent refresh calls
 let refreshPromise: Promise<string> | null = null
 
+// Các endpoint mà 401 nghĩa là "thông tin đăng nhập sai", không phải "token hết hạn".
+// Nếu để interceptor xử lý chúng, đăng nhập sai sẽ kích hoạt refresh, refresh hỏng
+// rồi chuyển hướng về /login — trang tải lại và nuốt mất thông báo lỗi.
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/refresh', '/auth/logout', '/setup']
+
+function isAuthEndpoint(url?: string): boolean {
+  if (!url) return false
+  return AUTH_ENDPOINTS.some((path) => url.includes(path))
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthEndpoint(originalRequest?.url)
+    ) {
       originalRequest._retry = true
       try {
         // If a refresh is already in-flight, wait for it instead of firing another
