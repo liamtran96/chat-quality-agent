@@ -70,7 +70,7 @@ func getSettingValue(settings []models.AppSetting, key, defaultVal string) strin
 func SaveAISettings(c *gin.Context) {
 	tenantID := middleware.GetTenantID(c)
 	var req struct {
-		Provider string `json:"provider" binding:"required,oneof=claude gemini"`
+		Provider string `json:"provider" binding:"required,oneof=claude gemini openai xai"`
 		// Để trống nghĩa là giữ nguyên key đã lưu — người dùng không phải nhập
 		// lại key mỗi lần chỉ muốn đổi model hay cỡ lô.
 		APIKey    string `json:"api_key"`
@@ -167,7 +167,8 @@ func classifyProviderError(err error) (code string, message string) {
 	case strings.Contains(msg, "401") || strings.Contains(msg, "403") ||
 		strings.Contains(msg, "unauthenticated") || strings.Contains(msg, "permission") ||
 		strings.Contains(msg, "api key not valid") || strings.Contains(msg, "invalid_api_key") ||
-		strings.Contains(msg, "authentication"):
+		strings.Contains(msg, "incorrect api key") || strings.Contains(msg, "invalid api key") ||
+		strings.Contains(msg, "api key") || strings.Contains(msg, "authentication"):
 		return "invalid_api_key", "API key không hợp lệ hoặc không có quyền truy cập"
 	case strings.Contains(msg, "429") || strings.Contains(msg, "quota") ||
 		strings.Contains(msg, "rate") || strings.Contains(msg, "resource_exhausted"):
@@ -240,6 +241,10 @@ func TestAIKey(c *gin.Context) {
 		client = ai.NewClaudeProvider(string(apiKeyBytes), model, testKeyMaxTokens, baseURL)
 	case "gemini":
 		client = ai.NewGeminiProvider(string(apiKeyBytes), model, baseURL)
+	case "openai":
+		client = ai.NewOpenAIProvider(string(apiKeyBytes), model, testKeyMaxTokens, baseURL)
+	case "xai":
+		client = ai.NewXAIProvider(string(apiKeyBytes), model, testKeyMaxTokens, baseURL)
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported_provider", "message": "Nhà cung cấp không được hỗ trợ: " + provider})
 		return

@@ -50,11 +50,28 @@ var staticGeminiModels = []catalog.Model{
 	{ID: "gemini-2.5-flash", Title: "Gemini 2.5 Flash (Thế hệ cũ)"},
 }
 
+var staticOpenAIModels = []catalog.Model{
+	{ID: "gpt-5", Title: "GPT-5 (Khuyến nghị)"},
+	{ID: "gpt-5-mini", Title: "GPT-5 mini (Nhanh & rẻ)"},
+	{ID: "o3", Title: "o3 (Suy luận sâu)"},
+}
+
+var staticXAIModels = []catalog.Model{
+	{ID: "grok-4", Title: "Grok 4 (Khuyến nghị)"},
+	{ID: "grok-3", Title: "Grok 3 (Thế hệ cũ)"},
+}
+
 func staticModels(provider string) []catalog.Model {
-	if provider == "gemini" {
+	switch provider {
+	case "gemini":
 		return staticGeminiModels
+	case "openai":
+		return staticOpenAIModels
+	case "xai":
+		return staticXAIModels
+	default:
+		return staticClaudeModels
 	}
-	return staticClaudeModels
 }
 
 // ListAIModels trả danh sách model cho phần cấu hình AI.
@@ -155,10 +172,16 @@ func fetchModels(ctx context.Context, tenantID, provider string) ([]catalog.Mode
 	}
 
 	baseURL := settingValue(tenantID, "ai_base_url")
-	if provider == "gemini" {
+	switch provider {
+	case "gemini":
 		return catalog.FetchGemini(ctx, string(apiKey), baseURL)
+	case "openai":
+		return catalog.FetchOpenAICompatible(ctx, string(apiKey), baseURL, "https://api.openai.com/v1")
+	case "xai":
+		return catalog.FetchOpenAICompatible(ctx, string(apiKey), baseURL, "https://api.x.ai/v1")
+	default:
+		return catalog.FetchClaude(ctx, string(apiKey), baseURL)
 	}
-	return catalog.FetchClaude(ctx, string(apiKey), baseURL)
 }
 
 func refreshModelsInBackground(tenantID, provider string) {

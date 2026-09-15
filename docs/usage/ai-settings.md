@@ -14,6 +14,14 @@ Vào menu **Cài đặt** > tab **Cấu hình AI**.
 |----------|---------|------------|
 | **Claude** (Anthropic) | Phân tích tiếng Việt tốt, chính xác cao | Giá cao hơn Gemini |
 | **Gemini** (Google) | Giá rẻ, tốc độ nhanh | Độ chính xác thấp hơn Claude |
+| **ChatGPT** (OpenAI) | Phổ biến, nhiều người đã có sẵn tài khoản | Cần thử với dữ liệu thật để so chất lượng tiếng Việt |
+| **Grok** (xAI) | Giá cạnh tranh | Ít được kiểm chứng với việc chấm chất lượng chat tiếng Việt |
+
+::: tip Dùng được cả proxy
+ChatGPT và Grok đi qua cùng một chuẩn giao tiếp, nên mục **Tùy chỉnh API URL** cũng
+dùng được với OpenRouter, LiteLLM hay máy chủ tự dựng theo chuẩn OpenAI — chọn
+ChatGPT rồi điền URL của proxy.
+:::
 
 ### Bước 2: Chọn Model
 
@@ -37,6 +45,19 @@ chi phí dài hạn.
 | Claude Opus 5 | $5 / $25 | Yêu cầu phân tích phức tạp |
 | Claude Sonnet 4.6 | $3 / $15 | Thế hệ cũ, giữ cho ai đang dùng |
 | Claude Opus 4.6 | $5 / $25 | Thế hệ cũ |
+
+**ChatGPT (OpenAI):**
+| Model | Giá vào / ra | Phù hợp |
+|-------|--------------|---------|
+| GPT-5 | $1.25 / $10 | Khuyến nghị |
+| GPT-5 mini | $0.25 / $2 | Số lượng lớn, ngân sách hạn chế |
+| o3 | $2 / $8 | Yêu cầu suy luận sâu |
+
+**Grok (xAI):**
+| Model | Giá vào / ra | Phù hợp |
+|-------|--------------|---------|
+| Grok 4 | $1.25 / $2.50 | Khuyến nghị |
+| Grok 3 | $1.25 / $2.50 | Thế hệ cũ |
 
 **Gemini:**
 | Model | Giá vào / ra | Phù hợp |

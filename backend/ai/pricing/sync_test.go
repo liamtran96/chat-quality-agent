@@ -44,7 +44,8 @@ func TestFetchLoaiDonGiaBatThuong(t *testing.T) {
 		"claude-qua-lon": {"input_cost_per_token": 1.0, "output_cost_per_token": 0.00001},
 		"claude-thieu-field": {"context_window": 200000},
 		"gemini-tot": {"input_cost_per_token": 0.00000075, "output_cost_per_token": 0.00000375},
-		"gpt-khong-quan-tam": {"input_cost_per_token": 0.000001, "output_cost_per_token": 0.000002},
+		"mistral-khong-quan-tam": {"input_cost_per_token": 0.000001, "output_cost_per_token": 0.000002},
+		"gpt-5-quan-tam": {"input_cost_per_token": 0.00000125, "output_cost_per_token": 0.00001},
 		"claude-ten-co-ky-tu-la<script>": {"input_cost_per_token": 0.000001, "output_cost_per_token": 0.000002}
 	}`
 	// Gọi thẳng bộ lọc, không qua ngưỡng số lượng tối thiểu của Fetch.
@@ -60,7 +61,10 @@ func TestFetchLoaiDonGiaBatThuong(t *testing.T) {
 	if _, ok := rates["gemini-tot"]; !ok {
 		t.Error("bản ghi gemini hợp lệ phải được giữ")
 	}
-	for _, bad := range []string{"claude-am", "claude-qua-lon", "gpt-khong-quan-tam", "claude-ten-co-ky-tu-la<script>"} {
+	if _, ok := rates["gpt-5-quan-tam"]; !ok {
+		t.Error("bản ghi openai hợp lệ phải được giữ")
+	}
+	for _, bad := range []string{"claude-am", "claude-qua-lon", "mistral-khong-quan-tam", "claude-ten-co-ky-tu-la<script>"} {
 		if _, ok := rates[bad]; ok {
 			t.Errorf("bản ghi %q đáng lẽ bị loại", bad)
 		}

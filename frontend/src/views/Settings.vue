@@ -31,7 +31,7 @@
           <v-select
             v-model="aiSettings.provider"
             :label="$t('ai_provider')"
-            :items="[{ title: 'Claude (Anthropic)', value: 'claude' }, { title: 'Gemini (Google)', value: 'gemini' }]"
+            :items="providerOptions"
             class="mb-3"
             @update:model-value="onProviderChange"
           />
@@ -212,6 +212,21 @@ const claudeModels = [
   { title: 'Claude Sonnet 4.6 (Thế hệ cũ)', value: 'claude-sonnet-4-6' },
   { title: 'Claude Opus 4.6 (Thế hệ cũ)', value: 'claude-opus-4-6' },
 ]
+const providerOptions = [
+  { title: 'Claude (Anthropic)', value: 'claude' },
+  { title: 'Gemini (Google)', value: 'gemini' },
+  { title: 'ChatGPT (OpenAI)', value: 'openai' },
+  { title: 'Grok (xAI)', value: 'xai' },
+]
+const openaiModels = [
+  { title: 'GPT-5 (Khuyến nghị)', value: 'gpt-5' },
+  { title: 'GPT-5 mini (Nhanh & rẻ)', value: 'gpt-5-mini' },
+  { title: 'o3 (Suy luận sâu)', value: 'o3' },
+]
+const xaiModels = [
+  { title: 'Grok 4 (Khuyến nghị)', value: 'grok-4' },
+  { title: 'Grok 3 (Thế hệ cũ)', value: 'grok-3' },
+]
 const geminiModels = [
   { title: 'Gemini 3.8 Flash (Khuyến nghị)', value: 'gemini-3.8-flash' },
   { title: 'Gemini 3.1 Flash Lite (Nhanh & rẻ nhất)', value: 'gemini-3.1-flash-lite' },
@@ -231,6 +246,24 @@ const appUrlRules = [
   (v: string) => !v || !v.endsWith('/') || 'URL không nên có dấu / ở cuối',
 ]
 
+function fallbackModels(provider: string) {
+  switch (provider) {
+    case 'gemini': return geminiModels
+    case 'openai': return openaiModels
+    case 'xai': return xaiModels
+    default: return claudeModels
+  }
+}
+
+function defaultModelFor(provider: string) {
+  switch (provider) {
+    case 'gemini': return 'gemini-3.8-flash'
+    case 'openai': return 'gpt-5'
+    case 'xai': return 'grok-4'
+    default: return 'claude-sonnet-5'
+  }
+}
+
 // Danh sách lấy từ nhà cung cấp nếu có, không thì dùng danh sách kèm sẵn.
 const fetchedModels = ref<{ id: string; title: string }[]>([])
 const modelsSource = ref('')
@@ -240,7 +273,7 @@ const modelOptions = computed(() => {
   if (fetchedModels.value.length) {
     return fetchedModels.value.map(m => ({ title: m.title, value: m.id }))
   }
-  const fallback = aiSettings.provider === 'claude' ? claudeModels : geminiModels
+  const fallback = fallbackModels(aiSettings.provider)
   // Model đang dùng phải luôn có mặt, nếu không ô chọn sẽ hiện trống.
   if (aiSettings.model && !fallback.some(m => m.value === aiSettings.model)) {
     return [{ title: `${aiSettings.model} (đang dùng)`, value: aiSettings.model }, ...fallback]
@@ -277,7 +310,7 @@ async function refreshModelList() {
 
 function onProviderChange() {
   // Reset to default model when switching provider
-  aiSettings.model = aiSettings.provider === 'claude' ? 'claude-sonnet-5' : 'gemini-3.8-flash'
+  aiSettings.model = defaultModelFor(aiSettings.provider)
   // Danh sách model của nhà cung cấp cũ không còn đúng nữa
   fetchedModels.value = []
   modelsSource.value = ''

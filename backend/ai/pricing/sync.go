@@ -30,7 +30,7 @@ const (
 
 // Chỉ nhận model của những dòng CQA thực sự dùng, để không nuốt cả nghìn model
 // không liên quan vào bộ nhớ.
-var wantedPrefixes = []string{"claude-", "gemini-"}
+var wantedPrefixes = []string{"claude-", "gemini-", "gpt-", "grok-", "chatgpt-", "o1", "o3", "o4"}
 
 // Tên model hợp lệ: chữ thường, số, và một vài dấu phân cách. Chặn mọi thứ khác
 // để dữ liệu ngoài không lọt được ký tự lạ vào khoá tra cứu.

@@ -36,6 +36,7 @@ type Model struct {
 var excludedKeywords = []string{
 	"embedding", "embed", "imagen", "image-generation", "veo", "aqa",
 	"tts", "text-to-speech", "audio", "vision-only", "learnlm",
+	"whisper", "dall-e", "moderation", "transcribe", "realtime", "sora",
 }
 
 func usableForChat(id string) bool {
@@ -203,6 +204,68 @@ func supports(methods []string, want string) bool {
 		}
 	}
 	return false
+}
+
+// FetchOpenAICompatible lấy danh sách model từ dịch vụ theo chuẩn OpenAI
+// (OpenAI, xAI, và các proxy tương thích).
+func FetchOpenAICompatible(ctx context.Context, apiKey, baseURL, defaultBaseURL string) ([]Model, error) {
+	endpoint := strings.TrimSuffix(baseURL, "/")
+	if endpoint == "" {
+		endpoint = defaultBaseURL
+	}
+	endpoint += "/models"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating models request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	resp, err := httpClient().Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetching models: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("nhà cung cấp trả mã %d", resp.StatusCode)
+	}
+
+	body, err := readLimited(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	var payload struct {
+		Data []struct {
+			ID      string `json:"id"`
+			Created int64  `json:"created"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, fmt.Errorf("parsing models: %w", err)
+	}
+
+	type dated struct {
+		Model
+		created int64
+	}
+	var items []dated
+	for _, m := range payload.Data {
+		if !validID(m.ID) || !usableForChat(m.ID) {
+			continue
+		}
+		items = append(items, dated{Model{ID: m.ID, Title: m.ID}, m.Created})
+		if len(items) >= maxModels {
+			break
+		}
+	}
+	sort.SliceStable(items, func(i, j int) bool { return items[i].created > items[j].created })
+
+	out := make([]Model, 0, len(items))
+	for _, it := range items {
+		out = append(out, it.Model)
+	}
+	return out, nil
 }
 
 // EnsureContains đảm bảo model đang được chọn luôn có mặt trong danh sách.
