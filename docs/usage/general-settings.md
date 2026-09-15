@@ -26,7 +26,7 @@ Chi phí AI (Claude, Gemini) được tính bằng USD. CQA quy đổi sang VND 
 
 Cấu hình URL để hệ thống gửi link chính xác qua [Telegram và Email](/usage/notifications).
 
-- Nhập URL truy cập CQA của bạn, ví dụ: `https://cqa.sepay.vn`
+- Nhập URL truy cập CQA của bạn, ví dụ: `https://cqa.congty-cua-ban.vn`
 - URL phải bắt đầu bằng `http://` hoặc `https://`, không có dấu `/` ở cuối
 - Link trong thông báo sẽ dẫn thẳng đến trang kết quả trên CQA
 
