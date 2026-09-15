@@ -75,6 +75,30 @@ Hoặc kiểm tra trên trình duyệt — bấm vào icon khóa bên cạnh URL
 | `Could not obtain certificate` | DNS chưa trỏ đúng | Kiểm tra DNS A record |
 | `Too many requests` | Đã request quá 5 lần/tuần | Chờ 1 tuần hoặc dùng staging |
 | `Port 80 already in use` | Có service khác dùng port 80 | Dừng service đó (Apache, nginx cũ...) |
+| `invalid authorization: ... 403` | Đường dẫn `/.well-known/acme-challenge/` bị chặn | Xem mục bên dưới |
+
+### Chứng chỉ hết hạn dù đã bật tự động gia hạn
+
+CQA tự gia hạn mỗi 7 ngày khi chứng chỉ còn dưới 30 ngày. Nếu vẫn hết hạn, xem log:
+
+```bash
+docker compose logs nginx | grep ssl-entrypoint
+```
+
+Nguyên nhân hay gặp nhất là Let's Encrypt không truy cập được đường dẫn xác minh.
+Họ gọi từ IP bất kỳ, nên nếu nginx bị giới hạn theo IP hoặc tường lửa chặn port 80
+từ ngoài thì việc xác minh thất bại, trong khi trang web vẫn chạy bình thường cho
+tới ngày chứng chỉ hết hạn.
+
+Kiểm tra từ một máy ngoài mạng:
+
+```bash
+curl -I http://cqa.yourdomain.com/.well-known/acme-challenge/test
+```
+
+Trả về `404` là đúng (không có file đó, nhưng đường dẫn thông). Trả về `403` là đang
+bị chặn — cần cho phép riêng đường dẫn này đi qua. Nếu có giới hạn IP trong cấu hình
+nginx, thêm `allow all;` vào ngay trong khối `location /.well-known/acme-challenge/`.
 
 ## Bước tiếp theo
 

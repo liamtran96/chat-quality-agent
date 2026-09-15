@@ -57,6 +57,13 @@ fi
                 renew --days 30; then
             echo "[ssl-entrypoint] Reloading nginx with new certificate..."
             nginx -s reload
+        else
+            # Thất bại ở đây mà không báo gì thì tới lúc phát hiện là chứng chỉ
+            # đã hết hạn. Nguyên nhân hay gặp: /.well-known/acme-challenge/ bị
+            # chặn (giới hạn IP, tường lửa), hoặc port 80 không vào được.
+            echo "[ssl-entrypoint] CẢNH BÁO: gia hạn chứng chỉ cho ${DOMAIN} thất bại." >&2
+            echo "[ssl-entrypoint] Kiểm tra http://${DOMAIN}/.well-known/acme-challenge/ có truy cập được từ ngoài không." >&2
+            echo "[ssl-entrypoint] Sẽ thử lại sau 7 ngày." >&2
         fi
     done
 ) &

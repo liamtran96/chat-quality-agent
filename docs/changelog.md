@@ -6,6 +6,9 @@
 - **Lệnh đặt lại mật khẩu từ dòng lệnh**: `docker exec -it cqa-app /app/cqa-server reset-password` — liệt kê tài khoản, nhập mật khẩu ẩn, tự kiểm tra độ mạnh và thu hồi toàn bộ phiên đăng nhập cũ. Dùng khi admin duy nhất quên mật khẩu. Chỉ chạy được trên server, không có đường gọi qua web
 - **Script `scripts/reset-password.sh`**: làm việc tương tự cho bản cài chưa cập nhật, tự chuyển sang dùng lệnh trong ứng dụng nếu bản cài đã có
 
+### Sửa lỗi
+- **Gia hạn SSL thất bại im lặng**: `/.well-known/acme-challenge/` nay luôn mở cho Let's Encrypt kể cả khi nginx bị giới hạn theo IP — trước đó việc xác minh trả 403 nên chứng chỉ hết hạn dù vòng lặp gia hạn vẫn chạy đều. Gia hạn hỏng cũng ghi cảnh báo rõ vào log thay vì im lặng
+
 ### Tài liệu
 - **Quên mật khẩu admin**: viết lại mục trong FAQ — hướng dẫn cũ dùng `-u root -p$MYSQL_ROOT_PASSWORD` trong khi biến này không tồn tại ở shell của host nên chạy sẽ tắc, lại thiếu hẳn bước sinh mã hoá mật khẩu và gợi ý "thêm admin mới qua API" vốn không thực hiện được khi chưa đăng nhập được. Bổ sung cách xử lý khi bị khoá do đăng nhập sai 5 lần
 
