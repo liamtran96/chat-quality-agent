@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"path"
@@ -150,6 +151,43 @@ func (s *SyncEngine) SyncChannel(ctx context.Context, channel models.Channel) er
 	return s.updateSyncStatus(channel.ID, "success", "")
 }
 
+// luuFileDinhKem lưu một file, ưu tiên kho chính; kho chính hỏng thì ghi xuống
+// đĩa để không mất tấm ảnh đó.
+//
+// Phải tải lại từ đầu cho lượt thử thứ hai vì luồng dữ liệu của lượt trước đã
+// bị đọc mất. Đường này hiếm khi chạy nên tải lại một lần là chấp nhận được,
+// đổi lại không bao giờ mất ảnh chỉ vì S3 chập chờn.
+func luuFileDinhKem(ctx context.Context, chinh, duPhong storage.Store, key string,
+	tai func() (io.ReadCloser, int64, string, error)) (noiDaLuu string, err error) {
+
+	body, size, contentType, err := tai()
+	if err != nil {
+		return "", err
+	}
+	err = chinh.Put(ctx, key, body, size, contentType)
+	body.Close()
+	if err == nil {
+		return chinh.Kind(), nil
+	}
+	if chinh == duPhong {
+		return "", err
+	}
+
+	log.Printf("[sync] kho chính (%s) không nhận file %s: %v — ghi tạm xuống đĩa, chạy migrate-files -up để chuyển lên sau",
+		chinh.Kind(), key, err)
+
+	body2, size2, contentType2, err2 := tai()
+	if err2 != nil {
+		return "", fmt.Errorf("kho chính hỏng (%v) và tải lại cũng hỏng: %w", err, err2)
+	}
+	err2 = duPhong.Put(ctx, key, body2, size2, contentType2)
+	body2.Close()
+	if err2 != nil {
+		return "", fmt.Errorf("kho chính hỏng (%v) và ghi xuống đĩa cũng hỏng: %w", err, err2)
+	}
+	return duPhong.Kind() + " (tạm)", nil
+}
+
 // SyncAllChannels syncs all active channels for a tenant.
 func (s *SyncEngine) SyncAllChannels(ctx context.Context, tenantID string) error {
 	var chans []models.Channel
@@ -266,11 +304,20 @@ func (s *SyncEngine) updateSyncStatus(channelID, status, errMsg string) error {
 // máy chủ hoặc S3. Khoá của file vẫn là "<tenant>/<cuộc chat>/<tên file>" như
 // trước, nên đổi nơi cất không phải đụng vào dữ liệu đã lưu.
 func (s *SyncEngine) downloadAttachments(tenantID, convID string, msg *channels.SyncedMessage) {
+	// Kho trên đĩa luôn dựng sẵn làm lưới an toàn. Mất một tấm ảnh là mất hẳn —
+	// link ảnh bên Zalo và Facebook hết hạn sau ít lâu, không tải lại được nữa —
+	// nên S3 trục trặc thì thà ghi tạm xuống đĩa rồi chuyển lên sau, hơn là bỏ.
+	duPhong, err := storage.NewLocal(s.cfg.StorageLocalDir)
+	if err != nil {
+		log.Printf("[sync] không dựng được kho trên đĩa: %v", err)
+		return
+	}
+
 	// Mỗi công ty có kho riêng: công ty này để trên S3, công ty kia vẫn trên đĩa.
 	store, err := storage.ForTenant(tenantID)
 	if err != nil {
-		log.Printf("[sync] không lấy được nơi cất file của công ty %s: %v", tenantID, err)
-		return
+		log.Printf("[sync] không lấy được nơi cất file của công ty %s (%v) — tạm ghi xuống đĩa", tenantID, err)
+		store = duPhong
 	}
 
 	for i, att := range msg.Attachments {
@@ -286,23 +333,22 @@ func (s *SyncEngine) downloadAttachments(tenantID, convID string, msg *channels.
 		}
 		key := path.Join(tenantID, convID, name)
 
-		// Download file
-		client := &http.Client{Timeout: 30 * time.Second}
-		resp, errTai := client.Get(att.URL)
-		if errTai != nil {
-			log.Printf("[sync] download failed for %s: %v", att.URL, errTai)
-			continue
-		}
-		if resp.StatusCode != 200 {
-			resp.Body.Close()
-			log.Printf("[sync] download failed for %s: status %d", att.URL, resp.StatusCode)
-			continue
+		tai := func() (io.ReadCloser, int64, string, error) {
+			client := &http.Client{Timeout: 30 * time.Second}
+			resp, err := client.Get(att.URL)
+			if err != nil {
+				return nil, 0, "", err
+			}
+			if resp.StatusCode != 200 {
+				resp.Body.Close()
+				return nil, 0, "", fmt.Errorf("status %d", resp.StatusCode)
+			}
+			// ContentLength là -1 khi máy chủ không báo độ dài; nơi cất file
+			// hiểu -1 là "chưa biết trước".
+			return resp.Body, resp.ContentLength, resp.Header.Get("Content-Type"), nil
 		}
 
-		// ContentLength là -1 khi máy chủ không báo độ dài; nơi cất file hiểu
-		// -1 là "chưa biết trước".
-		err = store.Put(context.Background(), key, resp.Body, resp.ContentLength, resp.Header.Get("Content-Type"))
-		resp.Body.Close()
+		noiDaLuu, err := luuFileDinhKem(context.Background(), store, duPhong, key, tai)
 		if err != nil {
 			log.Printf("[sync] lưu file %s hỏng: %v", key, err)
 			continue
@@ -311,6 +357,6 @@ func (s *SyncEngine) downloadAttachments(tenantID, convID string, msg *channels.
 		// Trường LocalPath giữ nguyên tên cũ để không phải đổi dữ liệu đã lưu,
 		// nay mang nghĩa khoá của file trong nơi cất.
 		msg.Attachments[i].LocalPath = key
-		log.Printf("[sync] downloaded %s → %s (%s)", att.URL, key, store.Kind())
+		log.Printf("[sync] downloaded %s → %s (%s)", att.URL, key, noiDaLuu)
 	}
 }

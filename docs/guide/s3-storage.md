@@ -55,6 +55,22 @@ cấu hình hỏng.
   không thấy thì tìm tiếp trên đĩa
 - Việc chuyển file cũ lên S3 làm lúc nào cũng được, không gấp
 
+## S3 trục trặc thì sao
+
+Ảnh mới đồng bộ về mà không ghi được lên S3 — mạng chập, khoá hết hạn, bucket đầy — thì CQA
+**ghi tạm xuống máy chủ** chứ không bỏ tấm ảnh đó. Link ảnh bên Zalo và Facebook hết hạn sau ít
+lâu, bỏ là mất hẳn không tải lại được.
+
+Log sẽ ghi:
+
+```
+[sync] kho chính (s3) không nhận file <khoá>: <lý do> — ghi tạm xuống đĩa,
+chạy migrate-files -up để chuyển lên sau
+```
+
+Ảnh vẫn hiển thị bình thường trong lúc đó vì CQA đọc S3 trước rồi tìm tiếp trên máy chủ. Xử lý
+xong sự cố thì chạy `migrate-files -up -apply` để dọn phần ghi tạm lên S3.
+
 ## Chuyển file cũ lên S3
 
 Chạy trên máy chủ. Xem trước, không đụng gì:
