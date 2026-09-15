@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/vietbui/chat-quality-agent/db"
 	"github.com/vietbui/chat-quality-agent/db/models"
 	"github.com/vietbui/chat-quality-agent/mcp"
+	"github.com/vietbui/chat-quality-agent/storage"
 )
 
 func SetupRouter(cfg *config.Config) *gin.Engine {
@@ -49,12 +51,6 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			return
 		}
-		fullPath := filepath.Join("/var/lib/cqa/files", cleanPath)
-		// Verify resolved path is within base directory
-		if !strings.HasPrefix(fullPath, "/var/lib/cqa/files") {
-			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
-			return
-		}
 		// Security: verify user belongs to the tenant owning this file
 		// Path structure: /{tenantID}/{convID}/{filename}
 		pathParts := strings.SplitN(strings.TrimPrefix(cleanPath, "/"), "/", 3)
@@ -71,7 +67,27 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			c.JSON(http.StatusForbidden, gin.H{"error": "tenant_access_denied"})
 			return
 		}
-		c.File(fullPath)
+		// Đọc từ nơi cất file đang cấu hình. Với S3, lớp đọc dự phòng sẽ tìm
+		// tiếp trên đĩa khi object chưa được chuyển lên.
+		key := strings.TrimPrefix(cleanPath, "/")
+		store, err := storage.ForTenant(fileTenantID)
+		if err != nil {
+			log.Printf("[storage] không lấy được nơi cất file của công ty %s: %v", fileTenantID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "storage_error"})
+			return
+		}
+		body, contentType, size, err := store.Get(c.Request.Context(), key)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "not_found"})
+				return
+			}
+			log.Printf("[storage] đọc file %s hỏng: %v", key, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "storage_error"})
+			return
+		}
+		defer body.Close()
+		c.DataFromReader(http.StatusOK, size, contentType, body, nil)
 	})
 
 	// CORS
@@ -193,6 +209,9 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			tenant.PUT("/settings", middleware.RequirePermission("settings", "w"), handlers.SaveSetting)
 			tenant.PUT("/settings/ai", middleware.RequirePermission("settings", "w"), handlers.SaveAISettings)
 			tenant.PUT("/settings/analysis", middleware.RequirePermission("settings", "w"), handlers.SaveAnalysisSettings)
+			tenant.GET("/settings/storage", middleware.RequirePermission("settings", "r"), handlers.GetStorageStatus)
+			tenant.PUT("/settings/storage", middleware.RequirePermission("settings", "w"), handlers.SaveStorageSettings)
+			tenant.POST("/settings/storage/test", middleware.RequirePermission("settings", "w"), handlers.TestStorageSettings)
 			tenant.POST("/settings/ai/test", middleware.RequirePermission("settings", "w"), handlers.TestAIKey)
 			tenant.GET("/settings/ai/models", middleware.RequirePermission("settings", "r"), handlers.ListAIModels)
 			tenant.POST("/settings/ai/models/refresh", middleware.RequirePermission("settings", "w"), handlers.RefreshAIModels)

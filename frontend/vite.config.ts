@@ -10,12 +10,13 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
+      // Đổi được bằng VITE_API_TARGET để chạy song song nhiều backend lúc dev.
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8080',
         changeOrigin: true,
       },
       '/oauth': {
-        target: 'http://localhost:8080',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8080',
         changeOrigin: true,
       },
       '/mcp': {

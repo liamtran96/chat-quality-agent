@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"github.com/vietbui/chat-quality-agent/db"
 	"github.com/vietbui/chat-quality-agent/db/models"
 	"github.com/vietbui/chat-quality-agent/pkg"
+	"github.com/vietbui/chat-quality-agent/storage"
 )
 
 // SyncEngine handles pulling messages from external channels into the database.
@@ -183,17 +183,17 @@ func (s *SyncEngine) upsertConversation(tenantID, channelID string, conv channel
 
 	// Create new
 	newConv := models.Conversation{
-		ID:                       pkg.NewUUID(),
-		TenantID:                 tenantID,
-		ChannelID:                channelID,
-		ExternalConversationID:   conv.ExternalID,
-		ExternalUserID:           conv.ExternalUserID,
-		CustomerName:             conv.CustomerName,
-		LastMessageAt:            &conv.LastMessageAt,
-		MessageCount:             0,
-		Metadata:                 string(metadataJSON),
-		CreatedAt:                time.Now(),
-		UpdatedAt:                time.Now(),
+		ID:                     pkg.NewUUID(),
+		TenantID:               tenantID,
+		ChannelID:              channelID,
+		ExternalConversationID: conv.ExternalID,
+		ExternalUserID:         conv.ExternalUserID,
+		CustomerName:           conv.CustomerName,
+		LastMessageAt:          &conv.LastMessageAt,
+		MessageCount:           0,
+		Metadata:               string(metadataJSON),
+		CreatedAt:              time.Now(),
+		UpdatedAt:              time.Now(),
 	}
 	if err := db.DB.Create(&newConv).Error; err != nil {
 		return "", err
@@ -262,61 +262,55 @@ func (s *SyncEngine) updateSyncStatus(channelID, status, errMsg string) error {
 	return nil
 }
 
-// downloadAttachments downloads attachment files from URLs to local storage.
+// downloadAttachments tải file đính kèm về nơi cất file đang cấu hình — đĩa
+// máy chủ hoặc S3. Khoá của file vẫn là "<tenant>/<cuộc chat>/<tên file>" như
+// trước, nên đổi nơi cất không phải đụng vào dữ liệu đã lưu.
 func (s *SyncEngine) downloadAttachments(tenantID, convID string, msg *channels.SyncedMessage) {
+	// Mỗi công ty có kho riêng: công ty này để trên S3, công ty kia vẫn trên đĩa.
+	store, err := storage.ForTenant(tenantID)
+	if err != nil {
+		log.Printf("[sync] không lấy được nơi cất file của công ty %s: %v", tenantID, err)
+		return
+	}
+
 	for i, att := range msg.Attachments {
 		if att.URL == "" {
 			continue
 		}
-		// Create directory
-		dir := filepath.Join("/var/lib/cqa/files", tenantID, convID)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			log.Printf("[sync] mkdir failed for %s: %v", dir, err)
-			continue
-		}
 
-		// Generate filename — sanitize to prevent path traversal from external API data
+		// Tên file đến từ API bên ngoài nên không được tin: chỉ lấy phần tên,
+		// bỏ mọi thành phần đường dẫn.
 		name := filepath.Base(att.Name)
-		if name == "" || name == "." || name == "/" {
+		if name == "" || name == "." || name == "/" || strings.Contains(name, "..") {
 			name = fmt.Sprintf("%s-%d", att.Type, time.Now().UnixMilli())
 		}
-		localPath := filepath.Join(dir, name)
-		// Verify path stays within intended directory
-		if !strings.HasPrefix(filepath.Clean(localPath), filepath.Clean(dir)+string(filepath.Separator)) {
-			log.Printf("[security] path traversal blocked: att.Name=%s resolved=%s", att.Name, localPath)
-			continue
-		}
+		key := path.Join(tenantID, convID, name)
 
 		// Download file
 		client := &http.Client{Timeout: 30 * time.Second}
-		resp, err := client.Get(att.URL)
-		if err != nil {
-			log.Printf("[sync] download failed for %s: %v", att.URL, err)
+		resp, errTai := client.Get(att.URL)
+		if errTai != nil {
+			log.Printf("[sync] download failed for %s: %v", att.URL, errTai)
 			continue
 		}
-
 		if resp.StatusCode != 200 {
 			resp.Body.Close()
 			log.Printf("[sync] download failed for %s: status %d", att.URL, resp.StatusCode)
 			continue
 		}
 
-		f, err := os.Create(localPath)
-		if err != nil {
-			resp.Body.Close()
-			log.Printf("[sync] create file failed %s: %v", localPath, err)
-			continue
-		}
-		_, err = io.Copy(f, resp.Body)
+		// ContentLength là -1 khi máy chủ không báo độ dài; nơi cất file hiểu
+		// -1 là "chưa biết trước".
+		err = store.Put(context.Background(), key, resp.Body, resp.ContentLength, resp.Header.Get("Content-Type"))
 		resp.Body.Close()
-		f.Close()
 		if err != nil {
-			log.Printf("[sync] write file failed %s: %v", localPath, err)
+			log.Printf("[sync] lưu file %s hỏng: %v", key, err)
 			continue
 		}
 
-		// Update attachment with local path (relative for serving)
-		msg.Attachments[i].LocalPath = filepath.Join(tenantID, convID, name)
-		log.Printf("[sync] downloaded %s → %s", att.URL, localPath)
+		// Trường LocalPath giữ nguyên tên cũ để không phải đổi dữ liệu đã lưu,
+		// nay mang nghĩa khoá của file trong nơi cất.
+		msg.Attachments[i].LocalPath = key
+		log.Printf("[sync] downloaded %s → %s (%s)", att.URL, key, store.Kind())
 	}
 }

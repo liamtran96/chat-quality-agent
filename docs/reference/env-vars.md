@@ -37,6 +37,15 @@ Danh sách đầy đủ các biến môi trường trong file `.env`.
 | `RATE_LIMIT_PER_IP` | Số request/phút cho mỗi IP | `500` |
 | `RATE_LIMIT_PER_USER` | Số request/phút cho mỗi user | `1000` |
 
+## Lưu file đính kèm (tùy chọn)
+
+| Biến | Mô tả | Mặc định |
+|------|-------|----------|
+| `STORAGE_LOCAL_DIR` | Thư mục cất file đính kèm trên máy chủ | `/var/lib/cqa/files` |
+
+Muốn cất file lên S3 thì cấu hình trong giao diện, **Cài đặt > Lưu trữ file**, riêng cho từng
+công ty — không có biến môi trường S3 nào. Xem [Lưu file đính kèm lên S3](/guide/s3-storage).
+
 ## Nhật ký hệ thống (tùy chọn)
 
 | Biến | Mô tả | Mặc định |

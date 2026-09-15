@@ -130,6 +130,158 @@
           <v-btn color="primary" :loading="savingAnalysis" @click="saveAnalysis">Lưu cài đặt</v-btn>
         </v-card>
 
+        <!-- Storage -->
+        <v-card v-if="activeTab === 'storage'" class="pa-6">
+          <div class="text-subtitle-1 font-weight-bold mb-1">
+            <v-icon start size="small">mdi-folder-multiple-image</v-icon>
+            {{ $t('storage_settings') }}
+          </div>
+          <div class="text-body-2 text-grey mb-5">{{ $t('storage_intro') }}</div>
+
+          <v-alert
+            :type="storage.backend === 's3' ? 'success' : 'info'"
+            variant="tonal"
+            density="comfortable"
+            class="mb-5"
+          >
+            <span v-if="storage.backend === 's3'">
+              {{ $t('storage_now_s3') }} <strong>{{ storage.bucket }}</strong> · {{ storageHost }}
+            </span>
+            <span v-else>{{ $t('storage_now_local') }}</span>
+          </v-alert>
+
+          <v-switch
+            v-model="dungS3"
+            color="primary"
+            density="compact"
+            hide-details
+            class="mb-2"
+            :label="$t('storage_use_s3')"
+            @update:model-value="testResult = null"
+          />
+
+          <v-expand-transition>
+            <div v-if="dungS3">
+              <v-divider class="my-4" />
+
+              <v-text-field
+                v-model="storage.endpoint"
+                :label="$t('storage_endpoint')"
+                placeholder="https://s3.nha-cung-cap.vn"
+                density="comfortable"
+                class="mb-3"
+                hide-details="auto"
+                @update:model-value="testResult = null"
+              />
+
+              <v-row dense>
+                <v-col cols="12" sm="7">
+                  <v-text-field
+                    v-model="storage.bucket"
+                    :label="$t('storage_bucket')"
+                    density="comfortable"
+                    hide-details="auto"
+                    @update:model-value="testResult = null"
+                  />
+                </v-col>
+                <v-col cols="12" sm="5">
+                  <v-text-field
+                    v-model="storage.region"
+                    :label="$t('storage_region')"
+                    density="comfortable"
+                    hide-details="auto"
+                    @update:model-value="testResult = null"
+                  />
+                </v-col>
+              </v-row>
+
+              <v-text-field
+                v-model="storage.access_key"
+                label="Access Key"
+                density="comfortable"
+                class="mt-3"
+                hide-details="auto"
+                @update:model-value="testResult = null"
+              />
+
+              <v-text-field
+                v-model="storage.secret_key"
+                label="Secret Key"
+                type="password"
+                density="comfortable"
+                class="mt-3"
+                hide-details="auto"
+                :placeholder="storage.secret_key_da_luu ? '••••••••' : ''"
+                :hint="storage.secret_key_da_luu ? $t('storage_secret_saved') : ''"
+                persistent-hint
+                @update:model-value="testResult = null"
+              />
+
+              <v-expansion-panels variant="accordion" class="mt-4">
+                <v-expansion-panel elevation="0">
+                  <v-expansion-panel-title class="text-body-2">{{ $t('advanced_options') }}</v-expansion-panel-title>
+                  <v-expansion-panel-text>
+                    <v-text-field
+                      v-model="storage.prefix"
+                      :label="$t('storage_prefix')"
+                      density="comfortable"
+                      hide-details="auto"
+                      @update:model-value="testResult = null"
+                    />
+                    <v-switch
+                      v-model="storage.force_path_style"
+                      color="primary"
+                      density="compact"
+                      hide-details
+                      class="mt-2"
+                      :label="$t('storage_path_style')"
+                      @update:model-value="testResult = null"
+                    />
+                  </v-expansion-panel-text>
+                </v-expansion-panel>
+              </v-expansion-panels>
+
+              <v-alert
+                v-if="testResult"
+                :type="testResult.ok ? 'success' : 'error'"
+                variant="tonal"
+                density="comfortable"
+                class="mt-4"
+              >
+                {{ testResult.message }}
+              </v-alert>
+
+              <div class="d-flex flex-wrap align-center ga-3 mt-5">
+                <v-btn variant="outlined" :loading="testingStorage" prepend-icon="mdi-lan-connect" @click="testStorage">
+                  {{ $t('storage_test') }}
+                </v-btn>
+                <v-btn color="primary" :disabled="!testResult?.ok" :loading="savingStorage" @click="saveStorage">
+                  {{ $t('save_settings') }}
+                </v-btn>
+                <span v-if="!testResult?.ok" class="text-caption text-grey">{{ $t('storage_must_test') }}</span>
+              </div>
+
+              <v-divider class="my-6" />
+              <div class="text-body-2 font-weight-medium mb-1">{{ $t('storage_old_files_title') }}</div>
+              <div class="text-body-2 text-grey mb-3">{{ $t('storage_old_files_desc') }}</div>
+              <v-btn
+                variant="text"
+                color="primary"
+                size="small"
+                prepend-icon="mdi-book-open-variant"
+                href="https://tanviet12.github.io/chat-quality-agent/guide/s3-storage.html"
+                target="_blank"
+              >
+                {{ $t('storage_guide') }}
+              </v-btn>
+            </div>
+          </v-expand-transition>
+
+          <div v-if="!dungS3 && storage.backend === 's3'" class="mt-4">
+            <v-btn color="primary" :loading="savingStorage" @click="saveStorage">{{ $t('save_settings') }}</v-btn>
+          </div>
+        </v-card>
+
         <!-- General -->
         <v-card v-if="activeTab === 'general'" class="pa-6">
           <div class="text-subtitle-1 font-weight-bold mb-4">
@@ -197,10 +349,29 @@ const snackColor = ref('success')
 const savingAI = ref(false)
 const testingKey = ref(false)
 const savingGeneral = ref(false)
+const savingStorage = ref(false)
+const testingStorage = ref(false)
+
+// Nơi cất file đính kèm, cấu hình riêng cho từng công ty.
+const storage = reactive({
+  backend: 'local',
+  endpoint: '',
+  bucket: '',
+  region: '',
+  access_key: '',
+  secret_key: '',
+  prefix: '',
+  force_path_style: false,
+  secret_key_da_luu: false,
+})
+const dungS3 = ref(false)
+const testResult = ref<{ ok: boolean; message: string } | null>(null)
+const storageHost = computed(() => storage.endpoint.replace(/^https?:\/\//, '').replace(/\/$/, ''))
 
 const tabs = [
   { label: 'ai_config', value: 'ai', icon: 'mdi-robot' },
   { label: 'analysis_settings', value: 'analysis', icon: 'mdi-chart-bar' },
+  { label: 'storage_settings', value: 'storage', icon: 'mdi-folder-multiple-image' },
   { label: 'general', value: 'general', icon: 'mdi-cog' },
 ]
 
@@ -414,6 +585,54 @@ async function testKey() {
   }
 }
 
+async function loadStorage() {
+  try {
+    const { data } = await api.get(`/tenants/${tenantId.value}/settings/storage`)
+    Object.assign(storage, data, { secret_key: '' })
+    dungS3.value = data.backend === 's3'
+    testResult.value = null
+  } catch { /* giữ mặc định lưu trên máy chủ */ }
+}
+
+function storagePayload() {
+  return {
+    backend: dungS3.value ? 's3' : 'local',
+    endpoint: storage.endpoint,
+    bucket: storage.bucket,
+    region: storage.region,
+    access_key: storage.access_key,
+    secret_key: storage.secret_key,
+    prefix: storage.prefix,
+    force_path_style: storage.force_path_style,
+  }
+}
+
+async function testStorage() {
+  testingStorage.value = true
+  testResult.value = null
+  try {
+    const { data } = await api.post(`/tenants/${tenantId.value}/settings/storage/test`, storagePayload())
+    testResult.value = { ok: data.ok === true, message: data.message || '' }
+  } catch (e: any) {
+    testResult.value = { ok: false, message: e.response?.data?.message || t('connection_failed') }
+  } finally {
+    testingStorage.value = false
+  }
+}
+
+async function saveStorage() {
+  savingStorage.value = true
+  try {
+    await api.put(`/tenants/${tenantId.value}/settings/storage`, storagePayload())
+    await loadStorage()
+    showSnack(t('settings_saved'), 'success')
+  } catch (e: any) {
+    showSnack(e.response?.data?.message || t('save_failed'), 'error')
+  } finally {
+    savingStorage.value = false
+  }
+}
+
 async function saveGeneral() {
   savingGeneral.value = true
   try {
@@ -442,5 +661,6 @@ onMounted(async () => {
   await loadSettings()
   // Nạp sau khi đã biết nhà cung cấp và model đang chọn
   loadModelList()
+  loadStorage()
 })
 </script>

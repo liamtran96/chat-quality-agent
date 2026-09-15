@@ -25,6 +25,7 @@ export default defineConfig({
           { text: 'Cài đặt', link: '/guide/installation' },
           { text: 'Cập nhật phiên bản', link: '/guide/updates' },
           { text: 'Tên miền & SSL', link: '/guide/domain-ssl' },
+          { text: 'Lưu file lên S3', link: '/guide/s3-storage' },
           { text: 'Thiết lập ban đầu', link: '/guide/initial-setup' },
         ],
       },

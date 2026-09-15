@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/vietbui/chat-quality-agent/storage"
 )
 
 type Config struct {
@@ -31,6 +33,11 @@ type Config struct {
 	AIMaxTokens int // max tokens for AI responses
 
 	// Đồng bộ bảng giá model từ nguồn ngoài
+	// StorageLocalDir là thư mục cất file khi công ty chưa bật S3. Nơi cất file
+	// do từng công ty tự chọn trong giao diện nên không có biến môi trường S3
+	// nào ở đây.
+	StorageLocalDir string
+
 	// ActivityLogRetentionDays: số ngày giữ nhật ký hệ thống, 0 là giữ mãi.
 	ActivityLogRetentionDays int
 
@@ -56,6 +63,8 @@ func Load() (*Config, error) {
 		RateLimitPerIP:   getEnvInt("RATE_LIMIT_PER_IP", 500),
 		RateLimitPerUser: getEnvInt("RATE_LIMIT_PER_USER", 1000),
 		AIMaxTokens:      getEnvInt("AI_MAX_TOKENS", 16384),
+
+		StorageLocalDir: getEnv("STORAGE_LOCAL_DIR", storage.DefaultBaseDir),
 
 		ActivityLogRetentionDays: getEnvInt("ACTIVITY_LOG_RETENTION_DAYS", 90),
 

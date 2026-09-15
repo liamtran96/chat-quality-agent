@@ -14,6 +14,8 @@ import (
 	"github.com/vietbui/chat-quality-agent/config"
 	"github.com/vietbui/chat-quality-agent/db"
 	"github.com/vietbui/chat-quality-agent/engine"
+	"github.com/vietbui/chat-quality-agent/storage"
+	"github.com/vietbui/chat-quality-agent/storagecfg"
 )
 
 var version = "dev"
@@ -47,6 +49,10 @@ func main() {
 	if err := db.AutoMigrate(); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
+
+	// Nơi cất file đính kèm do từng công ty tự cấu hình trong giao diện, đọc
+	// theo yêu cầu chứ không dựng sẵn một kho dùng chung.
+	storage.SetConfigLoader(storagecfg.Loader(cfg))
 
 	// Đồng bộ bảng giá model từ nguồn ngoài. Hỏng thì bảng tĩnh vẫn phục vụ.
 	if cfg.PricingSyncEnabled {
@@ -84,6 +90,11 @@ func runCommand(name string, args []string) {
 			fmt.Fprintf(os.Stderr, "Lỗi: %v\n", err)
 			os.Exit(1)
 		}
+	case "migrate-files":
+		if err := cli.MigrateFiles(args); err != nil {
+			fmt.Fprintf(os.Stderr, "Lỗi: %v\n", err)
+			os.Exit(1)
+		}
 	case "prune-duplicate-results":
 		if err := cli.PruneDuplicateResults(args); err != nil {
 			fmt.Fprintf(os.Stderr, "Lỗi: %v\n", err)
@@ -96,6 +107,7 @@ func runCommand(name string, args []string) {
 		fmt.Fprintln(os.Stderr, "Các lệnh có sẵn:")
 		fmt.Fprintln(os.Stderr, "  reset-password [-email EMAIL]   Đặt lại mật khẩu một tài khoản")
 		fmt.Fprintln(os.Stderr, "  prune-duplicate-results [-apply] Dọn bản đánh giá trùng, giữ lượt chạy mới nhất")
+		fmt.Fprintln(os.Stderr, "  migrate-files [-apply]           Chuyển file đính kèm từ đĩa lên S3")
 		fmt.Fprintln(os.Stderr, "  version                         In phiên bản")
 		fmt.Fprintln(os.Stderr, "\nChạy không kèm lệnh để khởi động web server.")
 		os.Exit(1)

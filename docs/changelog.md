@@ -3,6 +3,8 @@
 ## v2026.09.15
 
 ### Tính năng mới
+- **Lưu file đính kèm lên S3** (#52): thêm tuỳ chọn cất ảnh, video, tài liệu của cuộc chat lên dịch vụ tương thích S3 (AWS S3, Cloudflare R2, DigitalOcean Spaces, MinIO, object storage trong nước) thay vì đĩa máy chủ. **Cấu hình trong Cài đặt > Lưu trữ file, riêng cho từng công ty** — công ty này để trên S3, công ty kia vẫn lưu trên máy chủ. Phải bấm Kiểm tra kết nối đạt mới lưu được, và phép kiểm tra chạy trọn vòng ghi–đọc–xoá thật chứ không chỉ thử kết nối, nên khoá thiếu quyền ghi bị phát hiện ngay thay vì đợi tới lúc đồng bộ. Bật S3 trên hệ thống đang chạy **không cần chuyển file cũ trước**: file mới lên S3, file cũ vẫn đọc được từ máy chủ. Khoá file giữ nguyên đường dẫn cũ nên không phải sửa database. Ảnh vẫn đi qua ứng dụng nên bucket để riêng tư, không lộ link ra ngoài
+- **Lệnh chuyển file cũ lên S3**: `migrate-files` chép file từ máy chủ lên S3 cho các công ty đã bật, chạy lại bao nhiêu lần cũng được và đứt giữa chừng thì chép tiếp phần còn thiếu. Bước xoá bản trên máy chủ tách riêng bằng cờ `-delete-local`, chỉ xoá file đã xác nhận có trên S3 đúng dung lượng
 - **Tự dọn nhật ký hệ thống**: bảng nhật ký chỉ ghi thêm nên chạy lâu là phình to. Nay mỗi ngày 3h15 sáng hệ thống xoá các dòng cũ hơn 90 ngày, xoá theo lô để không khoá bảng. Đổi số ngày bằng `ACTIVITY_LOG_RETENTION_DAYS`, đặt `0` để giữ mãi như trước
 - **Lệnh dọn bản đánh giá trùng**: `prune-duplicate-results` giữ lại kết quả của lượt chạy gần nhất mỗi cặp (công việc, cuộc chat) và xoá các lượt cũ hơn, dành cho bản cài đã tích dữ liệu trùng từ lỗi đánh giá lặp. Mặc định chỉ in bản kê, phải thêm `-apply` và gõ xác nhận mới xoá; từ chối chạy khi còn công việc đang chạy dở; xoá xong tự đối chiếu lại số dòng và số cặp. Chỉ đụng tới bảng `job_results`
 - **Script sao lưu tự kiểm chứng**: `scripts/backup-db.sh` dump toàn bộ database rồi phục hồi thử sang database tạm và đối chiếu số dòng từng bảng, lệch một dòng là dừng và báo lỗi. Database tạm tự xoá sau khi kiểm xong, dữ liệu đang chạy chỉ được đọc
@@ -34,6 +36,7 @@
 - **Chứng chỉ hết hạn không tự cấp lại**: chứng chỉ để quá hạn lâu thì lệnh gia hạn bị Let's Encrypt từ chối vì bản cũ đã bị xoá khỏi hệ thống, mà luồng khởi động lại chỉ biết gia hạn nên kẹt vĩnh viễn — nay tự chuyển sang cấp mới khi gia hạn hỏng
 
 ### Tài liệu
+- **Lưu file lên S3**: thêm trang hướng dẫn bật S3, chuyển file cũ, thu hồi dung lượng đĩa và cách quay lại lưu trên đĩa
 - **Cập nhật phiên bản**: mô tả lại cơ chế kiểm tra phiên bản cho khớp hành vi mới
 - **Biến môi trường**: thêm mục nhật ký hệ thống, và sửa mặc định giới hạn tần suất đang ghi sai (`100`/`300` trong khi mã dùng `500`/`1000`)
 - **Nhật ký hệ thống**: thêm trang tài liệu cho mục này — các hành động được ghi, cách dùng để kiểm tra công việc có chạy không, và những gì chỉ có trong log ứng dụng chứ không lên giao diện
