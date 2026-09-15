@@ -8,6 +8,7 @@
 
 ### Sửa lỗi
 - **Gia hạn SSL thất bại im lặng**: `/.well-known/acme-challenge/` nay luôn mở cho Let's Encrypt kể cả khi nginx bị giới hạn theo IP — trước đó việc xác minh trả 403 nên chứng chỉ hết hạn dù vòng lặp gia hạn vẫn chạy đều. Gia hạn hỏng cũng ghi cảnh báo rõ vào log thay vì im lặng
+- **Chứng chỉ hết hạn không tự cấp lại**: chứng chỉ để quá hạn lâu thì lệnh gia hạn bị Let's Encrypt từ chối vì bản cũ đã bị xoá khỏi hệ thống, mà luồng khởi động lại chỉ biết gia hạn nên kẹt vĩnh viễn — nay tự chuyển sang cấp mới khi gia hạn hỏng
 
 ### Tài liệu
 - **Quên mật khẩu admin**: viết lại mục trong FAQ — hướng dẫn cũ dùng `-u root -p$MYSQL_ROOT_PASSWORD` trong khi biến này không tồn tại ở shell của host nên chạy sẽ tắc, lại thiếu hẳn bước sinh mã hoá mật khẩu và gợi ý "thêm admin mới qua API" vốn không thực hiện được khi chưa đăng nhập được. Bổ sung cách xử lý khi bị khoá do đăng nhập sai 5 lần

@@ -34,13 +34,24 @@ if [ ! -f "$CERT_FILE" ]; then
 else
     # Attempt renewal on startup in case cert is near expiry
     echo "[ssl-entrypoint] Checking certificate renewal on startup..."
-    lego --accept-tos \
-         --email="$EMAIL" \
-         --domains="$DOMAIN" \
-         --path="$LEGO_DATA" \
-         --http \
-         --http.webroot "$ACME_DIR" \
-         renew --days 30 || true
+    if ! lego --accept-tos \
+              --email="$EMAIL" \
+              --domains="$DOMAIN" \
+              --path="$LEGO_DATA" \
+              --http \
+              --http.webroot "$ACME_DIR" \
+              renew --days 30; then
+        # Chứng chỉ đã hết hạn từ lâu thì renew không dùng được nữa: Let's Encrypt
+        # bỏ chứng chỉ cũ khỏi hệ thống nên yêu cầu gia hạn bị từ chối. Cấp mới.
+        echo "[ssl-entrypoint] Gia hạn không được, thử cấp chứng chỉ mới..."
+        lego --accept-tos \
+             --email="$EMAIL" \
+             --domains="$DOMAIN" \
+             --path="$LEGO_DATA" \
+             --http \
+             --http.webroot "$ACME_DIR" \
+             run || echo "[ssl-entrypoint] CẢNH BÁO: không lấy được chứng chỉ cho ${DOMAIN}." >&2
+    fi
 fi
 
 # Background renewal loop (every 7 days, renew if <30 days remaining)
@@ -63,7 +74,19 @@ fi
             # chặn (giới hạn IP, tường lửa), hoặc port 80 không vào được.
             echo "[ssl-entrypoint] CẢNH BÁO: gia hạn chứng chỉ cho ${DOMAIN} thất bại." >&2
             echo "[ssl-entrypoint] Kiểm tra http://${DOMAIN}/.well-known/acme-challenge/ có truy cập được từ ngoài không." >&2
-            echo "[ssl-entrypoint] Sẽ thử lại sau 7 ngày." >&2
+            echo "[ssl-entrypoint] Thử cấp chứng chỉ mới..." >&2
+            if lego --accept-tos \
+                    --email="$EMAIL" \
+                    --domains="$DOMAIN" \
+                    --path="$LEGO_DATA" \
+                    --http \
+                    --http.webroot "$ACME_DIR" \
+                    run; then
+                echo "[ssl-entrypoint] Reloading nginx with new certificate..."
+                nginx -s reload
+            else
+                echo "[ssl-entrypoint] CẢNH BÁO: cấp mới cũng thất bại, sẽ thử lại sau 7 ngày." >&2
+            fi
         fi
     done
 ) &
