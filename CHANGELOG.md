@@ -3,11 +3,13 @@
 ## v2026.09.15
 
 ### Tính năng mới
+- **Tự cập nhật bảng giá AI**: đơn giá token nay tự đồng bộ định kỳ từ nguồn công khai nên model mới hoặc giá thay đổi không phải chờ bản phát hành. Bảng giá kèm sẵn trong chương trình vẫn là lưới an toàn khi không có mạng. Tắt bằng `PRICING_SYNC_ENABLED=false`
 - **Cập nhật danh sách model AI**: bổ sung Claude Sonnet 5, Opus 5 và Gemini 3.x; mặc định chuyển sang Claude Sonnet 5 (rẻ hơn và mới hơn Sonnet 4.6) và Gemini 3.8 Flash. Gemini 2.0 Flash đã bị Google ngừng hoạt động; các model thế hệ cũ vẫn giữ trong danh sách cho ai đang dùng
 - **Lệnh đặt lại mật khẩu từ dòng lệnh**: `docker exec -it cqa-app /app/cqa-server reset-password` — liệt kê tài khoản, nhập mật khẩu ẩn, tự kiểm tra độ mạnh và thu hồi toàn bộ phiên đăng nhập cũ. Dùng khi admin duy nhất quên mật khẩu. Chỉ chạy được trên server, không có đường gọi qua web
 - **Script `scripts/reset-password.sh`**: làm việc tương tự cho bản cài chưa cập nhật, tự chuyển sang dùng lệnh trong ứng dụng nếu bản cài đã có
 
 ### Sửa lỗi
+- **Không còn đoán giá model lạ**: trước đây model không có trong bảng giá bị tính theo giá của một model khác, khiến chi phí sai mà không ai biết. Nay model chưa rõ giá được ghi nhận là chưa tính được kèm cảnh báo trong log, thay vì cho ra một con số sai trông như đúng
 - **Bảng giá AI tính sai chi phí**: đối chiếu bảng giá chính thức ngày 15/09/2026 thì Claude Opus 4.6 đang bị tính cao gấp ba ($15/$75 thay vì $5/$25), Claude Haiku 4.5 tính thiếu, còn Gemini 2.5 Flash — model được chọn mặc định — rơi vào nhánh giá của Gemini 2.0 nên thấp hơn thực tế tới 8 lần ở chiều ra. Con số trên Nhật ký chi phí và Trang chủ vì thế không đối chiếu được với hoá đơn. Nay cập nhật đúng giá và thêm kiểm thử khoá giá từng model
 - **Chi phí và số vấn đề trên trang chủ hiển thị sai ý nghĩa**: thẻ "Chi phí hôm nay" thực ra cộng chi phí của cả khoảng thời gian đang lọc nên lọc 28 ngày sẽ ra con số lớn hơn "Chi phí tháng này", trông như hai ô bị đảo chỗ. Nay chi phí hôm nay tính riêng từ 0 giờ, thẻ trên cùng đổi thành chi phí theo khoảng đang lọc. Thẻ "Vấn đề hôm nay" cũng lọc theo khoảng thời gian chứ không riêng hôm nay nên đổi tên thành "Vấn đề"
 - **Nút kiểm tra API key không kiểm tra gì** (#51): nút "Kiểm tra API Key" chỉ xem trong database có key hay không rồi báo xanh, không hề gọi tới Claude hay Gemini. Key sai, bị thu hồi hay hết hạn mức vẫn hiện "API key configured", người dùng chỉ phát hiện khi công việc chạy thật mà không ra kết quả. Nay nút này gọi thật một lượt tới nhà cung cấp và báo đúng lý do khi hỏng
@@ -20,6 +22,7 @@
 - **Chứng chỉ hết hạn không tự cấp lại**: chứng chỉ để quá hạn lâu thì lệnh gia hạn bị Let's Encrypt từ chối vì bản cũ đã bị xoá khỏi hệ thống, mà luồng khởi động lại chỉ biết gia hạn nên kẹt vĩnh viễn — nay tự chuyển sang cấp mới khi gia hạn hỏng
 
 ### Tài liệu
+- **Biến môi trường**: thêm mục đồng bộ bảng giá AI kèm các lớp kiểm tra dữ liệu tải từ nguồn ngoài
 - **Cấu hình AI**: bảng model kèm đơn giá từng loại, cảnh báo Gemini 2.0 Flash ngừng hoạt động và mốc tăng giá Gemini 3.x đầu năm 2027
 - **Trang chủ**: nói rõ thẻ nào đổi theo bộ lọc thời gian, thẻ nào cố định theo ngày và theo tháng
 - **Cấu hình AI**: bổ sung bảng ý nghĩa từng thông báo của nút Kiểm tra API Key, và mục xử lý khi khoá mã hoá bị đổi

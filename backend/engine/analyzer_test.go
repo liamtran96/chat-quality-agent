@@ -140,10 +140,9 @@ func TestCalculateCostUSD(t *testing.T) {
 		{"claude haiku cheap", "claude", "claude-haiku-4-5", 1000, 500, 0.001, 0.005},
 		{"gemini flash very cheap", "gemini", "gemini-2.0-flash", 1000, 500, 0.0001, 0.001},
 		{"zero tokens", "claude", "claude-sonnet-4-6", 0, 0, 0, 0},
-		// Model lạ rơi về giá mặc định của nhà cung cấp, không được trả 0
-		{"claude model la dung gia mac dinh", "claude", "model-khong-ton-tai", 1000, 500, 0.01, 0.02},
-		{"gemini model la dung gia mac dinh", "gemini", "model-khong-ton-tai", 1000, 500, 0.002, 0.003},
-		{"nha cung cap la tra 0", "openai", "gpt-4", 1000, 500, 0, 0},
+		// Model chưa biết giá trả 0 — phía gọi phân biệt bằng cờ known,
+		// xem TestCalculateCostChuaBietGia bên dưới
+		{"model la tra 0", "claude", "model-khong-ton-tai", 1000, 500, 0, 0},
 	}
 
 	for _, tt := range tests {
@@ -192,5 +191,38 @@ func TestCalculateCostUSDExactRates(t *testing.T) {
 				t.Errorf("%s: chi phí %f, mong đợi %f", r.model, got, want)
 			}
 		})
+	}
+}
+
+// TestCalculateCostChuaBietGia giữ đúng nguyên tắc: model chưa có đơn giá thì
+// báo chưa biết, không lặng lẽ đoán theo model khác.
+func TestCalculateCostChuaBietGia(t *testing.T) {
+	cost, known := ai.CalculateCost("model-chua-ton-tai-bao-gio", 1000, 500)
+	if known {
+		t.Error("model lạ không được coi là đã biết giá")
+	}
+	if cost != 0 {
+		t.Errorf("chi phí model lạ = %f, mong đợi 0", cost)
+	}
+
+	cost, known = ai.CalculateCost("claude-sonnet-5", 1_000_000, 1_000_000)
+	if !known {
+		t.Fatal("claude-sonnet-5 phải có đơn giá")
+	}
+	if diff := cost - 12.0; diff > 0.000001 || diff < -0.000001 {
+		t.Errorf("chi phí = %f, mong đợi 12.0", cost)
+	}
+}
+
+// TestCalculateCostBoTienToNhaCungCap kiểm tra tên model kèm tiền tố kiểu
+// "anthropic/claude-sonnet-5" vẫn tra được, vì nguồn giá ngoài hay ghi như vậy.
+func TestCalculateCostBoTienToNhaCungCap(t *testing.T) {
+	withPrefix, known := ai.CalculateCost("anthropic/claude-sonnet-5", 1_000_000, 0)
+	if !known {
+		t.Fatal("tên model có tiền tố nhà cung cấp phải tra được")
+	}
+	plain, _ := ai.CalculateCost("claude-sonnet-5", 1_000_000, 0)
+	if withPrefix != plain {
+		t.Errorf("có tiền tố = %f, không tiền tố = %f, phải bằng nhau", withPrefix, plain)
 	}
 }

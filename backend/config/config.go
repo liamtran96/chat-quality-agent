@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
 
 type Config struct {
@@ -29,6 +30,11 @@ type Config struct {
 	// AI
 	AIMaxTokens int // max tokens for AI responses
 
+	// Đồng bộ bảng giá model từ nguồn ngoài
+	PricingSyncEnabled  bool
+	PricingSyncURL      string
+	PricingSyncInterval time.Duration
+
 	// Environment
 	Env string // "development" | "production"
 }
@@ -47,7 +53,12 @@ func Load() (*Config, error) {
 		RateLimitPerIP:   getEnvInt("RATE_LIMIT_PER_IP", 500),
 		RateLimitPerUser: getEnvInt("RATE_LIMIT_PER_USER", 1000),
 		AIMaxTokens:      getEnvInt("AI_MAX_TOKENS", 16384),
-		Env:              getEnv("APP_ENV", "development"),
+
+		PricingSyncEnabled: getEnv("PRICING_SYNC_ENABLED", "true") == "true",
+		PricingSyncURL: getEnv("PRICING_SYNC_URL",
+			"https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"),
+		PricingSyncInterval: time.Duration(getEnvInt("PRICING_SYNC_INTERVAL_HOURS", 168)) * time.Hour,
+		Env:                 getEnv("APP_ENV", "development"),
 	}
 
 	if cfg.JWTSecret == "" {

@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 
+	"github.com/vietbui/chat-quality-agent/ai/pricing"
 	"github.com/vietbui/chat-quality-agent/api"
 	"github.com/vietbui/chat-quality-agent/api/handlers"
 	"github.com/vietbui/chat-quality-agent/api/middleware"
@@ -44,6 +46,15 @@ func main() {
 	// Run migrations
 	if err := db.AutoMigrate(); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	// Đồng bộ bảng giá model từ nguồn ngoài. Hỏng thì bảng tĩnh vẫn phục vụ.
+	if cfg.PricingSyncEnabled {
+		ctx, cancelPricing := context.WithCancel(context.Background())
+		defer cancelPricing()
+		pricing.StartSync(ctx, cfg.PricingSyncURL, cfg.PricingSyncInterval)
+	} else {
+		log.Printf("[pricing] đồng bộ giá đang tắt, dùng bảng tĩnh")
 	}
 
 	// Start scheduler
