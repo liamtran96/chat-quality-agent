@@ -3,6 +3,7 @@
 ## v2026.09.15
 
 ### Tính năng mới
+- **Danh sách model tự cập nhật**: ô chọn model nay lấy trực tiếp từ nhà cung cấp bằng API key của tenant, lưu lại và làm mới mỗi ngày, kèm nút làm mới thủ công. Model mới ra không cần chờ bản phát hành CQA. Model đang dùng luôn được giữ trong danh sách kể cả khi nhà cung cấp đã gỡ, để không mất lựa chọn đang có
 - **Tự cập nhật bảng giá AI**: đơn giá token nay tự đồng bộ định kỳ từ nguồn công khai nên model mới hoặc giá thay đổi không phải chờ bản phát hành. Bảng giá kèm sẵn trong chương trình vẫn là lưới an toàn khi không có mạng. Tắt bằng `PRICING_SYNC_ENABLED=false`
 - **Cập nhật danh sách model AI**: bổ sung Claude Sonnet 5, Opus 5 và Gemini 3.x; mặc định chuyển sang Claude Sonnet 5 (rẻ hơn và mới hơn Sonnet 4.6) và Gemini 3.8 Flash. Gemini 2.0 Flash đã bị Google ngừng hoạt động; các model thế hệ cũ vẫn giữ trong danh sách cho ai đang dùng
 - **Lệnh đặt lại mật khẩu từ dòng lệnh**: `docker exec -it cqa-app /app/cqa-server reset-password` — liệt kê tài khoản, nhập mật khẩu ẩn, tự kiểm tra độ mạnh và thu hồi toàn bộ phiên đăng nhập cũ. Dùng khi admin duy nhất quên mật khẩu. Chỉ chạy được trên server, không có đường gọi qua web
@@ -22,6 +23,7 @@
 - **Chứng chỉ hết hạn không tự cấp lại**: chứng chỉ để quá hạn lâu thì lệnh gia hạn bị Let's Encrypt từ chối vì bản cũ đã bị xoá khỏi hệ thống, mà luồng khởi động lại chỉ biết gia hạn nên kẹt vĩnh viễn — nay tự chuyển sang cấp mới khi gia hạn hỏng
 
 ### Tài liệu
+- **Cấu hình AI**: hướng dẫn cơ chế danh sách model tự cập nhật và nút làm mới
 - **Biến môi trường**: thêm mục đồng bộ bảng giá AI kèm các lớp kiểm tra dữ liệu tải từ nguồn ngoài
 - **Cấu hình AI**: bảng model kèm đơn giá từng loại, cảnh báo Gemini 2.0 Flash ngừng hoạt động và mốc tăng giá Gemini 3.x đầu năm 2027
 - **Trang chủ**: nói rõ thẻ nào đổi theo bộ lọc thời gian, thẻ nào cố định theo ngày và theo tháng

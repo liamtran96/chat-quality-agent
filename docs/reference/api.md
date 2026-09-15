@@ -91,6 +91,8 @@ Tất cả endpoint dưới đây nằm trong scope tenant: `/api/v1/tenants/:te
 | PUT | `/settings/ai` | Cấu hình AI |
 | PUT | `/settings/general` | Cài đặt chung |
 | POST | `/settings/ai/test` | Test kết nối AI |
+| GET | `/settings/ai/models` | Danh sách model khả dụng (ưu tiên bản đã lưu) |
+| POST | `/settings/ai/models/refresh` | Lấy lại danh sách model từ nhà cung cấp |
 
 ### Người dùng
 | Method | Path | Mô tả |

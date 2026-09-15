@@ -109,6 +109,8 @@ export default {
   cost: 'Cost',
   date: 'Date',
   ai_model: 'AI Model',
+  refresh_model_list: 'Refresh model list',
+  model_list_static: 'Showing the built-in list. Use refresh to fetch the latest from the provider.',
 
   // Results
   severity_critical: 'Critical',

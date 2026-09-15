@@ -36,12 +36,27 @@
             @update:model-value="onProviderChange"
           />
 
-          <v-select
-            v-model="aiSettings.model"
-            :label="$t('ai_model')"
-            :items="modelOptions"
-            class="mb-3"
-          />
+          <div class="d-flex align-start ga-2 mb-3">
+            <v-select
+              v-model="aiSettings.model"
+              :label="$t('ai_model')"
+              :items="modelOptions"
+              hide-details="auto"
+              class="flex-grow-1"
+            />
+            <v-btn
+              icon="mdi-refresh"
+              variant="text"
+              size="small"
+              class="mt-2"
+              :loading="refreshingModels"
+              :title="$t('refresh_model_list')"
+              @click="refreshModelList"
+            />
+          </div>
+          <div v-if="modelsSource === 'static'" class="text-caption text-grey mb-3">
+            {{ $t('model_list_static') }}
+          </div>
 
           <v-text-field
             v-model="aiSettings.apiKey"
@@ -216,13 +231,56 @@ const appUrlRules = [
   (v: string) => !v || !v.endsWith('/') || 'URL không nên có dấu / ở cuối',
 ]
 
+// Danh sách lấy từ nhà cung cấp nếu có, không thì dùng danh sách kèm sẵn.
+const fetchedModels = ref<{ id: string; title: string }[]>([])
+const modelsSource = ref('')
+const refreshingModels = ref(false)
+
 const modelOptions = computed(() => {
-  return aiSettings.provider === 'claude' ? claudeModels : geminiModels
+  if (fetchedModels.value.length) {
+    return fetchedModels.value.map(m => ({ title: m.title, value: m.id }))
+  }
+  const fallback = aiSettings.provider === 'claude' ? claudeModels : geminiModels
+  // Model đang dùng phải luôn có mặt, nếu không ô chọn sẽ hiện trống.
+  if (aiSettings.model && !fallback.some(m => m.value === aiSettings.model)) {
+    return [{ title: `${aiSettings.model} (đang dùng)`, value: aiSettings.model }, ...fallback]
+  }
+  return fallback
 })
+
+async function loadModelList() {
+  try {
+    const { data } = await api.get(`/tenants/${tenantId.value}/settings/ai/models`)
+    fetchedModels.value = data.models || []
+    modelsSource.value = data.source || ''
+  } catch {
+    // Không lấy được thì im lặng dùng danh sách kèm sẵn
+    fetchedModels.value = []
+    modelsSource.value = 'static'
+  }
+}
+
+async function refreshModelList() {
+  refreshingModels.value = true
+  try {
+    const { data } = await api.post(`/tenants/${tenantId.value}/settings/ai/models/refresh`)
+    fetchedModels.value = data.models || []
+    modelsSource.value = data.source || ''
+    showSnack(`Đã cập nhật ${fetchedModels.value.length} model`, 'success')
+  } catch (err: any) {
+    const res = err.response?.data
+    showSnack(res?.message || res?.error || t('error'), 'error')
+  } finally {
+    refreshingModels.value = false
+  }
+}
 
 function onProviderChange() {
   // Reset to default model when switching provider
   aiSettings.model = aiSettings.provider === 'claude' ? 'claude-sonnet-5' : 'gemini-3.8-flash'
+  // Danh sách model của nhà cung cấp cũ không còn đúng nữa
+  fetchedModels.value = []
+  modelsSource.value = ''
 }
 
 async function loadSettings() {
@@ -337,5 +395,9 @@ function showSnack(text: string, color: string) {
   snackbar.value = true
 }
 
-onMounted(loadSettings)
+onMounted(async () => {
+  await loadSettings()
+  // Nạp sau khi đã biết nhà cung cấp và model đang chọn
+  loadModelList()
+})
 </script>

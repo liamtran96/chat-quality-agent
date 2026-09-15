@@ -109,6 +109,8 @@ export default {
   cost: 'Chi phí',
   date: 'Ngày',
   ai_model: 'Model AI',
+  refresh_model_list: 'Làm mới danh sách model',
+  model_list_static: 'Đang dùng danh sách có sẵn. Bấm nút làm mới để lấy danh sách mới nhất từ nhà cung cấp.',
 
   // Results
   severity_critical: 'Nghiêm trọng',

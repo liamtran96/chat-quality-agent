@@ -17,6 +17,14 @@ Vào menu **Cài đặt** > tab **Cấu hình AI**.
 
 ### Bước 2: Chọn Model
 
+Danh sách model trong ô chọn được lấy trực tiếp từ nhà cung cấp bằng chính API key
+của bạn, nên model mới ra sẽ tự xuất hiện. Danh sách được lưu lại và làm mới mỗi
+ngày; muốn cập nhật ngay thì bấm nút làm mới cạnh ô chọn model. Khi chưa có API key
+hoặc không gọi được nhà cung cấp, CQA hiển thị danh sách kèm sẵn trong bản cài đặt.
+
+Model bạn đang dùng luôn có mặt trong danh sách, kể cả khi nhà cung cấp đã gỡ nó —
+để bạn không bị mất lựa chọn hiện tại.
+
 Giá dưới đây tính theo USD cho mỗi 1 triệu token, đối chiếu bảng giá chính thức
 ngày 15/09/2026. Nhà cung cấp có thể đổi giá, hãy kiểm tra lại trước khi tính toán
 chi phí dài hạn.

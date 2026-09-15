@@ -193,6 +193,8 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			tenant.PUT("/settings/ai", middleware.RequirePermission("settings", "w"), handlers.SaveAISettings)
 			tenant.PUT("/settings/analysis", middleware.RequirePermission("settings", "w"), handlers.SaveAnalysisSettings)
 			tenant.POST("/settings/ai/test", middleware.RequirePermission("settings", "w"), handlers.TestAIKey)
+			tenant.GET("/settings/ai/models", middleware.RequirePermission("settings", "r"), handlers.ListAIModels)
+			tenant.POST("/settings/ai/models/refresh", middleware.RequirePermission("settings", "w"), handlers.RefreshAIModels)
 			tenant.PUT("/settings/general", middleware.RequirePermission("settings", "w"), handlers.SaveGeneralSettings)
 			tenant.PUT("/settings/password", handlers.ChangePassword)
 
