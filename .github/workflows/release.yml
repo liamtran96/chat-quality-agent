@@ -1,11 +1,8 @@
 name: Release
 
+# Cố ý KHÔNG chạy tự động theo push: release là quyết định của người vận hành,
+# gom các thay đổi lại khi thấy ổn rồi mới bấm Run workflow.
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
   workflow_dispatch:
 
 permissions:
@@ -32,11 +29,6 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "=== Version: v${VERSION} ==="
-
-      - name: Create git tag
-        run: |
-          git tag "v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -75,6 +67,13 @@ jobs:
             buitanviet/chat-quality-agent-nginx:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Tag đặt sau khi cả hai image đã đẩy lên thành công, để build hỏng
+      # không để lại tag không có image kèm theo.
+      - name: Create git tag
+        run: |
+          git tag "v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
