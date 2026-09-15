@@ -162,28 +162,44 @@ func (s *Scheduler) loadCronJobs() {
 	db.DB.Where("is_active = true AND schedule_type = 'cron' AND schedule_cron != ''").Find(&jobs)
 
 	for _, job := range jobs {
-		j := job // capture
-		tz := tenantTimezone(j.TenantID)
-		cronExpr := fmt.Sprintf("TZ=%s %s", tz, j.ScheduleCron)
+		jobID := job.ID
+		jobName := job.Name
+		tz := tenantTimezone(job.TenantID)
+		cronExpr := fmt.Sprintf("TZ=%s %s", tz, job.ScheduleCron)
 		_, err := s.scheduler.NewJob(
 			gocron.CronJob(cronExpr, false),
-			gocron.NewTask(func() {
-				log.Printf("[scheduler] running analysis job %s (%s)", j.Name, j.ID)
-				analyzer := NewAnalyzer(s.cfg)
-				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
-				defer cancel()
-				if _, err := analyzer.RunJob(ctx, j); err != nil {
-					log.Printf("[scheduler] job %s failed: %v", j.Name, err)
-				}
-			}),
-			gocron.WithName("job-"+j.ID),
+			gocron.NewTask(func() { s.runScheduledJob(jobID, jobName) }),
+			gocron.WithName("job-"+jobID),
 		)
 		if err != nil {
-			log.Printf("[scheduler] failed to schedule job %s: %v", j.Name, err)
+			log.Printf("[scheduler] failed to schedule job %s: %v", jobName, err)
 		}
 	}
 
 	log.Printf("[scheduler] loaded %d cron jobs", len(jobs))
+}
+
+// runScheduledJob đọc lại job từ DB rồi chạy. Bắt buộc phải đọc lại: nếu dùng bản
+// sao capture lúc đăng ký cron, last_run_at trong bộ nhớ đứng yên suốt vòng đời
+// tiến trình, mốc quét bị đóng băng ở thời điểm app khởi động và job quét lại toàn
+// bộ hội thoại kể từ mốc đó, mỗi ngày một lần.
+func (s *Scheduler) runScheduledJob(jobID, jobName string) {
+	var j models.Job
+	if err := db.DB.First(&j, "id = ?", jobID).Error; err != nil {
+		log.Printf("[scheduler] job %s (%s) không đọc được từ DB, bỏ lượt này: %v", jobName, jobID, err)
+		return
+	}
+	if !j.IsActive {
+		log.Printf("[scheduler] job %s đã tắt, bỏ lượt này", j.Name)
+		return
+	}
+	log.Printf("[scheduler] running analysis job %s (%s)", j.Name, j.ID)
+	analyzer := NewAnalyzer(s.cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	if _, err := analyzer.RunJob(ctx, j); err != nil {
+		log.Printf("[scheduler] job %s failed: %v", j.Name, err)
+	}
 }
 
 // ReloadJobs removes all cron analysis jobs and reloads from DB.

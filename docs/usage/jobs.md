@@ -140,6 +140,24 @@ Bấm **Chạy thử** — hệ thống chạy trên 3 cuộc chat mẫu để k
 
 Nếu đã cấu hình lịch chạy (cron), công việc sẽ tự động chạy theo lịch.
 
+Mỗi lượt chạy tự động chỉ lấy cuộc chat có tin nhắn mới kể từ lần chạy trước. Cuộc chat đã có
+kết quả đánh giá và không phát sinh tin nhắn mới sẽ **không** bị đánh giá lại — nhờ vậy mỗi cuộc
+chat chỉ tốn một lượt gọi AI. Nếu khách nhắn thêm sau khi đã đánh giá, cuộc chat đó được đánh
+giá lại và bạn sẽ thấy thêm một bản đánh giá mới trong tab **Đánh giá**.
+
+Muốn quét lại nhóm cuộc chat cũ chưa từng được đánh giá, dùng **Chạy ngay → Chưa phân tích**.
+
+### Trạng thái lần chạy
+
+| Trạng thái | Ý nghĩa |
+|---|---|
+| `running` | Đang chạy |
+| `success` | Chạy xong toàn bộ cuộc chat trong phạm vi |
+| `partial` | Hết thời gian cho phép (30 phút) khi chưa xử lý hết. Phần còn lại tự động vào lần chạy sau, không bị bỏ sót |
+| `error` | Toàn bộ lượt gọi AI đều lỗi — kiểm tra API key và hạn mức nhà cung cấp |
+| `cancelled` | Người dùng bấm Huỷ. Phần chưa xử lý vào lần chạy sau |
+| `failed` | Bị gián đoạn do hệ thống khởi động lại |
+
 ---
 
 ## Chỉnh sửa công việc

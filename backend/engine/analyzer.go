@@ -166,6 +166,19 @@ func (a *Analyzer) runJobInternalExt(ctx context.Context, job models.Job, maxCon
 			Where("job_runs.job_id = ?", job.ID)
 		q = q.Where("id NOT IN (?)", analyzedSubq)
 	}
+	if !fullRerun {
+		// Bỏ qua cuộc chat đã có đánh giá mới hơn tin nhắn cuối. Thiếu điều kiện này,
+		// mỗi lần quét lại là một lần đánh giá trùng — có cuộc chat bị đánh giá 41 lần.
+		// Cuộc chat có tin nhắn mới sau lần đánh giá gần nhất vẫn được đánh giá lại.
+		q = q.Where(`NOT EXISTS (
+			SELECT 1 FROM job_results jr
+			INNER JOIN job_runs jrun ON jrun.id = jr.job_run_id
+			WHERE jr.conversation_id = conversations.id
+			  AND jrun.job_id = ?
+			  AND jr.created_at >= conversations.last_message_at)`, job.ID)
+	}
+	// Cũ trước mới: lần chạy bị cắt vì hết giờ thì lần sau tiếp đúng chỗ còn dang dở
+	q = q.Order("last_message_at ASC")
 	if maxConversations > 0 {
 		q = q.Limit(maxConversations)
 	}
@@ -173,8 +186,14 @@ func (a *Analyzer) runJobInternalExt(ctx context.Context, job models.Job, maxCon
 		return a.failRun(&run, fmt.Errorf("fetch conversations: %w", err))
 	}
 
-	log.Printf("[analyzer] job %s: channelIDs=%v, sinceZero=%v, excludeAnalyzed=%v, fullRerun=%v, found %d conversations",
-		job.Name, channelIDs, since.IsZero(), excludeAnalyzed, fullRerun, len(conversations))
+	// In rõ mốc quét: mốc bị đóng băng là gốc của vụ quét lại toàn bộ mỗi ngày,
+	// nhìn log cũ không thể phát hiện ra vì chỉ có sinceZero.
+	sinceLabel := "epoch"
+	if !since.IsZero() {
+		sinceLabel = pkg.ToVN(since).Format("2006-01-02 15:04:05")
+	}
+	log.Printf("[analyzer] job %s: channelIDs=%v, since=%s, excludeAnalyzed=%v, fullRerun=%v, found %d conversations",
+		job.Name, channelIDs, sinceLabel, excludeAnalyzed, fullRerun, len(conversations))
 
 	// Set initial total so frontend can show progress immediately
 	initialSummary, _ := json.Marshal(map[string]interface{}{
@@ -207,9 +226,10 @@ func (a *Analyzer) runJobInternalExt(ctx context.Context, job models.Job, maxCon
 	passCount := 0
 	analyzedCount := 0
 	errorCount := 0
+	truncated := false
 
 	if batchMode {
-		issuesFound, passCount, analyzedCount, errorCount = a.runBatchMode(ctx, provider, job, run, conversations, since, batchSize)
+		issuesFound, passCount, analyzedCount, errorCount, truncated = a.runBatchMode(ctx, provider, job, run, conversations, since, batchSize)
 	} else {
 
 		for _, conv := range conversations {
@@ -217,6 +237,7 @@ func (a *Analyzer) runJobInternalExt(ctx context.Context, job models.Job, maxCon
 			select {
 			case <-ctx.Done():
 				log.Printf("[analyzer] job %s: context cancelled, stopping after %d/%d conversations", job.Name, analyzedCount, len(conversations))
+				truncated = true
 				goto complete
 			default:
 			}
@@ -337,6 +358,17 @@ complete:
 	if analyzedCount == 0 && errorCount > 0 {
 		runStatus = "error"
 		run.ErrorMessage = fmt.Sprintf("AI errors: %d/%d conversations failed", errorCount, len(conversations))
+	} else if truncated {
+		runStatus = "partial"
+		run.ErrorMessage = fmt.Sprintf("Hết thời gian chạy, mới xử lý %d/%d cuộc chat. Phần còn lại vào lần chạy sau.",
+			analyzedCount, len(conversations))
+		// Người dùng bấm huỷ cũng đi qua đường ngắt context này. Giữ nguyên nhãn
+		// "cancelled" mà handler đã ghi, đừng báo thành hết giờ.
+		var current models.JobRun
+		if err := db.DB.Select("status").First(&current, "id = ?", run.ID).Error; err == nil && current.Status == "cancelled" {
+			runStatus = "cancelled"
+			run.ErrorMessage = "Cancelled by user"
+		}
 	}
 	// Critical: final status update — retry on failure to prevent stuck "running" state
 	for retry := 0; retry < 3; retry++ {
@@ -355,14 +387,19 @@ complete:
 
 	// Update job last_run (skip for test runs to avoid affecting future normal runs)
 	if !isTestRun {
-		db.DB.Model(&job).Updates(map[string]interface{}{
-			"last_run_at":     &finishedAt,
-			"last_run_status": "success",
+		updates := map[string]interface{}{
+			"last_run_status": runStatus,
 			"updated_at":      finishedAt,
-		})
+		}
+		// Chỉ dời mốc quét khi chạy trọn vẹn. Lần chạy bị cắt giữa chừng mà vẫn dời mốc
+		// thì phần chưa xử lý bị bỏ qua vĩnh viễn.
+		if !truncated {
+			updates["last_run_at"] = &finishedAt
+		}
+		db.DB.Model(&job).Updates(updates)
 	}
 
-	run.Status = "success"
+	run.Status = runStatus
 	run.FinishedAt = &finishedAt
 	run.Summary = string(summaryJSON)
 
@@ -611,7 +648,7 @@ func (a *Analyzer) saveResults(runID, tenantID, conversationID, jobType, aiRespo
 }
 
 // runBatchMode processes conversations in batches of batchSize, sending multiple conversations per AI call.
-func (a *Analyzer) runBatchMode(ctx context.Context, provider ai.AIProvider, job models.Job, run models.JobRun, conversations []models.Conversation, since time.Time, batchSize int) (issuesFound, passCount, analyzedCount, errorCount int) {
+func (a *Analyzer) runBatchMode(ctx context.Context, provider ai.AIProvider, job models.Job, run models.JobRun, conversations []models.Conversation, since time.Time, batchSize int) (issuesFound, passCount, analyzedCount, errorCount int, cancelled bool) {
 	// Build system prompt once
 	var systemPrompt string
 	switch job.JobType {
@@ -662,6 +699,7 @@ func (a *Analyzer) runBatchMode(ctx context.Context, provider ai.AIProvider, job
 		select {
 		case <-ctx.Done():
 			log.Printf("[analyzer-batch] job %s: context cancelled, stopping after %d/%d conversations", job.Name, analyzedCount, len(conversations))
+			cancelled = true
 			return
 		default:
 		}

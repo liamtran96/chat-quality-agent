@@ -33,7 +33,7 @@
             <td>
               <span v-if="job.last_run_at" class="text-body-2">
                 {{ new Date(job.last_run_at).toLocaleString() }}
-                <v-chip size="x-small" :color="job.last_run_status === 'success' ? 'success' : 'error'" variant="tonal" class="ml-1">
+                <v-chip size="x-small" :color="lastRunColor(job.last_run_status)" variant="tonal" class="ml-1">
                   {{ job.last_run_status }}
                 </v-chip>
               </span>
@@ -69,6 +69,12 @@ const tenantId = computed(() => route.params.tenantId as string)
 onMounted(() => jobStore.fetchJobs(tenantId.value))
 
 
+
+function lastRunColor(status: string) {
+  if (status === 'success') return 'success'
+  if (status === 'partial') return 'warning'
+  return 'error'
+}
 
 async function remove(jobId: string) {
   if (confirm('Delete this job?')) {

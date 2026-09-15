@@ -1289,7 +1289,8 @@ async function exportResults(format: string = 'csv') {
 
 function statusColor(status: string) {
   if (status === 'success') return 'success'
-  if (status === 'error') return 'error'
+  if (status === 'error' || status === 'failed') return 'error'
+  if (status === 'partial') return 'warning'
   return 'info'
 }
 
