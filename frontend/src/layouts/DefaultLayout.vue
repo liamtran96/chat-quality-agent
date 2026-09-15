@@ -374,19 +374,15 @@ function copyUpdateCmd() {
   navigator.clipboard.writeText('cd /opt/cqa && docker compose pull && docker compose up -d')
 }
 onMounted(async () => {
-  // Check cached version info (max 1 hour)
-  const cached = localStorage.getItem('cqa_version_check')
-  if (cached) {
-    try {
-      const { data, ts } = JSON.parse(cached)
-      if (Date.now() - ts < 3600000) { updateInfo.value = data; return }
-    } catch { /* ignore */ }
-  }
+  // Hỏi thẳng mỗi lần vào trang, không cache ở trình duyệt. Trước đây kết quả
+  // được giữ 1 tiếng trong localStorage, nên cập nhật xong banner "có phiên bản
+  // mới" vẫn còn đó cả tiếng và người dùng tưởng cập nhật hỏng. Phần tốn kém là
+  // lượt gọi GitHub thì máy chủ đã cache sẵn rồi.
   try {
     const { data } = await api.get('/version/check')
     updateInfo.value = data
-    localStorage.setItem('cqa_version_check', JSON.stringify({ data, ts: Date.now() }))
   } catch { /* ignore */ }
+  localStorage.removeItem('cqa_version_check') // dọn cache của bản cũ
 })
 
 // Load profile data when dialog opens

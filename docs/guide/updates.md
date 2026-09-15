@@ -2,12 +2,16 @@
 
 ## Thông báo trên giao diện
 
-CQA tự động kiểm tra phiên bản mới mỗi khi bạn đăng nhập (cache 1 giờ). Khi có bản cập nhật:
+CQA kiểm tra phiên bản mới mỗi lần bạn mở trang. Khi có bản cập nhật:
 
 - **Chip phiên bản** ở header chuyển sang màu vàng (bình thường là xanh)
 - **Banner thông báo** hiện bên dưới header với link đến changelog
 
 Bấm vào chip phiên bản để xem chi tiết thay đổi trong bản mới.
+
+Cập nhật xong, tải lại trang là banner biến mất. Phía máy chủ có giữ kết quả tra cứu trong
+1 giờ để đỡ gọi GitHub liên tục, nhưng bộ nhớ đó bị xoá khi ứng dụng khởi động lại — mà cập
+nhật thì luôn khởi động lại, nên không phải chờ.
 
 ## Cập nhật thủ công
 

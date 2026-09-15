@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,51 @@ var (
 	versionCacheTime time.Time
 	versionCacheMu   sync.Mutex
 )
+
+// IsNewerVersion cho biết latest có mới hơn current thật không.
+//
+// Cố ý không so sánh chuỗi: chỉ cần khác nhau là báo có bản mới thì bản đang
+// chạy mới hơn bản phát hành cuối (bản dựng tay, hoặc vừa phát hành xong mà
+// GitHub chưa kịp cập nhật) cũng bị giục cập nhật ngược về bản cũ, và bản dựng
+// từ mã nguồn với AppVersion "dev" thì bị giục vĩnh viễn.
+//
+// Phiên bản theo ngày: YYYY.MM.DD hoặc YYYY.MM.DD.N, bản đầu trong ngày không
+// có hậu tố nên tính là N=1.
+func IsNewerVersion(latest, current string) bool {
+	l, okL := parseVersion(latest)
+	c, okC := parseVersion(current)
+	if !okL || !okC {
+		return false
+	}
+	for i := 0; i < 4; i++ {
+		if l[i] != c[i] {
+			return l[i] > c[i]
+		}
+	}
+	return false
+}
+
+func parseVersion(v string) ([4]int, bool) {
+	var out [4]int
+	out[3] = 1 // bản đầu trong ngày không có hậu tố
+
+	v = strings.TrimPrefix(strings.TrimSpace(v), "v")
+	if v == "" {
+		return out, false
+	}
+	parts := strings.Split(v, ".")
+	if len(parts) < 3 || len(parts) > 4 {
+		return out, false
+	}
+	for i, p := range parts {
+		n, err := strconv.Atoi(p)
+		if err != nil || n < 0 {
+			return out, false
+		}
+		out[i] = n
+	}
+	return out, true
+}
 
 func CheckVersion(c *gin.Context) {
 	versionCacheMu.Lock()
@@ -71,9 +117,7 @@ func CheckVersion(c *gin.Context) {
 		return
 	}
 
-	currentNorm := strings.TrimPrefix(strings.TrimSpace(AppVersion), "v")
-	latestNorm := strings.TrimPrefix(strings.TrimSpace(release.TagName), "v")
-	hasUpdate := latestNorm != "" && latestNorm != currentNorm
+	hasUpdate := IsNewerVersion(release.TagName, AppVersion)
 	result := map[string]interface{}{
 		"current":       AppVersion,
 		"latest":        release.TagName,
