@@ -54,10 +54,16 @@ func GetDashboard(c *gin.Context) {
 		Group("channels.channel_type").
 		Scan(&channelCounts)
 
+	// Thẻ "Hoạt động gần đây" gộp hai danh sách rồi lấy recentActivityLimit dòng
+	// mới nhất. Mỗi danh sách vì thế phải lấy đủ recentActivityLimit: trước đây
+	// phía QC chỉ lấy 5 nên công ty không dùng phân loại thì thẻ vĩnh viễn chỉ có
+	// 5 dòng, nhìn như thiếu dữ liệu.
+	const recentActivityLimit = 10
+
 	// QC Alerts: only qc_violation (real quality issues)
 	var qcAlerts []models.JobResult
 	db.DB.Where("tenant_id = ? AND result_type = 'qc_violation' AND created_at BETWEEN ? AND ?", tenantID, from, to).
-		Order("created_at DESC").Limit(5).Find(&qcAlerts)
+		Order("created_at DESC").Limit(recentActivityLimit).Find(&qcAlerts)
 
 	// Classification recent: only classification_tag
 	type ClassificationItem struct {
@@ -69,7 +75,7 @@ func GetDashboard(c *gin.Context) {
 		Select("job_results.*, conversations.customer_name").
 		Joins("LEFT JOIN conversations ON conversations.id = job_results.conversation_id").
 		Where("job_results.tenant_id = ? AND job_results.result_type = 'classification_tag' AND job_results.created_at BETWEEN ? AND ?", tenantID, from, to).
-		Order("job_results.created_at DESC").Limit(10).Find(&classRecent)
+		Order("job_results.created_at DESC").Limit(recentActivityLimit).Find(&classRecent)
 
 	// AI cost
 	var costPeriod float64

@@ -15,6 +15,7 @@
 - **Script `scripts/reset-password.sh`**: làm việc tương tự cho bản cài chưa cập nhật, tự chuyển sang dùng lệnh trong ứng dụng nếu bản cài đã có
 
 ### Sửa lỗi
+- **Thẻ Hoạt động gần đây chỉ hiện 5 dòng**: thẻ gộp cảnh báo chất lượng với kết quả phân loại rồi lấy 10 dòng mới nhất, nhưng phía máy chủ chỉ trả 5 cảnh báo chất lượng. Công ty không dùng công việc phân loại thì thẻ vĩnh viễn dừng ở 5 dòng và trông như thiếu dữ liệu. Nay cả hai danh sách đều lấy đủ 10
 - **Banner "có phiên bản mới" không chịu tắt sau khi cập nhật**: giao diện giữ kết quả tra cứu phiên bản trong trình duyệt 1 giờ, nên cập nhật xong banner vẫn còn đó kèm số hiệu phiên bản cũ, trông như cập nhật hỏng và nhiều người chạy lại lệnh cập nhật lần nữa. Nay hỏi thẳng mỗi lần mở trang, tải lại là hết; phần tra cứu GitHub vẫn được máy chủ cache như cũ nên không phát sinh thêm lượt gọi ra ngoài
 - **So sánh phiên bản sai**: chỉ cần khác chuỗi là báo có bản mới, nên bản đang chạy mới hơn bản phát hành cuối vẫn bị giục cập nhật ngược về bản cũ, và bản dựng từ mã nguồn (`dev`) thì bị giục vĩnh viễn. Nay so theo số của từng phần trong `YYYY.MM.DD.N`
 - **Nhật ký hệ thống và chi phí AI ai cũng gọi được**: giao diện đã ẩn hai mục này với thành viên không có quyền đọc Cài đặt, nhưng hai endpoint tương ứng lại không kiểm quyền nên vẫn gọi thẳng được — nhật ký chứa email và IP đăng nhập của người dùng. Nay hai endpoint kiểm đúng quyền mà menu vốn đã dùng
