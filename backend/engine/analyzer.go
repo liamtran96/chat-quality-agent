@@ -168,7 +168,7 @@ func (a *Analyzer) runJobInternalExt(ctx context.Context, job models.Job, maxCon
 	}
 	if !fullRerun {
 		// Bỏ qua cuộc chat đã có đánh giá mới hơn tin nhắn cuối. Thiếu điều kiện này,
-		// mỗi lần quét lại là một lần đánh giá trùng — có cuộc chat bị đánh giá 41 lần.
+		// mỗi lần quét lại là một lần đánh giá trùng chồng lên bản cũ.
 		// Cuộc chat có tin nhắn mới sau lần đánh giá gần nhất vẫn được đánh giá lại.
 		q = q.Where(`NOT EXISTS (
 			SELECT 1 FROM job_results jr
@@ -186,8 +186,8 @@ func (a *Analyzer) runJobInternalExt(ctx context.Context, job models.Job, maxCon
 		return a.failRun(&run, fmt.Errorf("fetch conversations: %w", err))
 	}
 
-	// In rõ mốc quét: mốc bị đóng băng là gốc của vụ quét lại toàn bộ mỗi ngày,
-	// nhìn log cũ không thể phát hiện ra vì chỉ có sinceZero.
+	// In rõ mốc quét: mốc bị đóng băng là gốc của việc quét lại toàn bộ mỗi ngày,
+	// nhìn log cũ không phát hiện ra được vì chỉ có sinceZero.
 	sinceLabel := "epoch"
 	if !since.IsZero() {
 		sinceLabel = pkg.ToVN(since).Format("2006-01-02 15:04:05")

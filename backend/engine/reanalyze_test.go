@@ -135,7 +135,7 @@ func summaryInt(t *testing.T, run *models.JobRun, key string) int {
 }
 
 // Cuộc chat không có tin nhắn mới thì lần chạy sau không được đánh giá lại.
-// Đây là lỗi đã khiến một cuộc chat tháng 7 bị đánh giá 41 lần trên production.
+// Đây là lỗi khiến cuộc chat cũ tích thêm một bản đánh giá trùng mỗi ngày.
 func TestKhongDanhGiaLaiCuocChatCu(t *testing.T) {
 	f := setupReanalyzeFixture(t)
 	analyzer := NewAnalyzer(&config.Config{})
@@ -152,8 +152,8 @@ func TestKhongDanhGiaLaiCuocChatCu(t *testing.T) {
 		t.Fatalf("lan chay 1: cho 1 ban danh gia, nhan %d", got)
 	}
 
-	// Kéo mốc quét lùi về trước tin nhắn cuối, đúng tình huống production: mốc quét
-	// bị đóng băng nên cuộc chat cũ lọt vào lại phạm vi quét mỗi ngày.
+	// Kéo mốc quét lùi về trước tin nhắn cuối: mốc quét bị đóng băng thì cuộc chat
+	// cũ lọt lại vào phạm vi quét mỗi ngày.
 	db.DB.Exec("UPDATE jobs SET last_run_at = ? WHERE id = ?", time.Now().Add(-3*time.Hour), f.jobID)
 
 	// Lần chạy thứ hai: không có tin nhắn mới → không được chọn lại
