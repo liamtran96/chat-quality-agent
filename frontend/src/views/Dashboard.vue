@@ -132,7 +132,9 @@
               :key="item.id"
               class="d-flex align-center pa-2 mb-1 rounded"
               style="cursor: pointer"
-              :style="{ background: item._type === 'qc' ? '#fff5f5' : '#f8f8fc' }"
+              :style="{ background: item._type === 'qc'
+                ? 'rgba(var(--v-theme-error), 0.08)'
+                : 'rgba(var(--v-theme-on-surface), 0.04)' }"
               @click="goToConversation(item.conversation_id, item._type === 'qc' ? 'evaluation' : 'classification')"
             >
               <!-- QC Alert row -->

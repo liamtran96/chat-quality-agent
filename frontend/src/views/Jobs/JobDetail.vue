@@ -456,7 +456,7 @@
                     <v-progress-circular indeterminate size="24" />
                     <div class="text-caption text-grey mt-2">Đang tải...</div>
                   </div>
-                  <div v-else class="chat-transcript pa-2 rounded" style="background: #f5f5f5; max-height: 500px; overflow-y: auto;">
+                  <div v-else class="chat-transcript pa-2 rounded" style="background: rgba(var(--v-theme-on-surface), 0.04); max-height: 500px; overflow-y: auto;">
                     <div v-for="msg in chatMessages[group.conversationId]" :key="msg.id" class="mb-2">
                       <div
                         class="pa-2 rounded"
@@ -618,7 +618,7 @@
                 <v-progress-circular indeterminate size="24" />
                 <div class="text-caption text-grey mt-2">Đang tải...</div>
               </div>
-              <div v-else class="chat-transcript pa-2 rounded" style="background: #f5f5f5; max-height: 450px; overflow-y: auto;">
+              <div v-else class="chat-transcript pa-2 rounded" style="background: rgba(var(--v-theme-on-surface), 0.04); max-height: 450px; overflow-y: auto;">
                 <div v-for="msg in chatMessages[dialogGroup.conversationId]" :key="msg.id" class="mb-2">
                   <div
                     class="pa-2 rounded"
