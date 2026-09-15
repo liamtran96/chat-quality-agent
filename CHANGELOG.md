@@ -3,6 +3,7 @@
 ## v2026.09.15
 
 ### Tính năng mới
+- **Danh sách model gọn lại**: bỏ hai mục gắn nhãn CLIProxy khỏi danh sách có sẵn. Ai dùng proxy nay điền URL rồi bấm làm mới để lấy đúng danh sách model của proxy mình, không phải chọn từ danh sách đoán trước. Model đang dùng vẫn được giữ nguyên
 - **Thêm ChatGPT (OpenAI) và Grok (xAI)**: hai nhà cung cấp mới bên cạnh Claude và Gemini, dùng chung một bộ kết nối theo chuẩn OpenAI nên mục Tùy chỉnh API URL cũng chạy được với OpenRouter, LiteLLM hay máy chủ tự dựng theo chuẩn đó
 - **Danh sách model tự cập nhật**: ô chọn model nay lấy trực tiếp từ nhà cung cấp bằng API key của tenant, lưu lại và làm mới mỗi ngày, kèm nút làm mới thủ công. Model mới ra không cần chờ bản phát hành CQA. Model đang dùng luôn được giữ trong danh sách kể cả khi nhà cung cấp đã gỡ, để không mất lựa chọn đang có
 - **Tự cập nhật bảng giá AI**: đơn giá token nay tự đồng bộ định kỳ từ nguồn công khai nên model mới hoặc giá thay đổi không phải chờ bản phát hành. Bảng giá kèm sẵn trong chương trình vẫn là lưới an toàn khi không có mạng. Tắt bằng `PRICING_SYNC_ENABLED=false`

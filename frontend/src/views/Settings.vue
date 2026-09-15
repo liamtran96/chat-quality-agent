@@ -75,13 +75,14 @@
             hide-details
             class="mt-1 mb-2"
           />
-          <div v-if="!useCustomBaseUrl" class="text-caption text-grey mb-2">Bật khi cần dùng proxy (OpenRouter, LiteLLM) hoặc self-hosted</div>
+          <div v-if="!useCustomBaseUrl" class="text-caption text-grey mb-2">Bật khi cần dùng proxy (OpenRouter, LiteLLM, CLIProxy) hoặc máy chủ tự dựng</div>
+          <div v-else class="text-caption text-grey mb-2">Điền xong hãy lưu cài đặt rồi bấm nút làm mới cạnh ô Model AI, danh sách model sẽ lấy theo đúng proxy này</div>
 
           <v-text-field
             v-if="useCustomBaseUrl"
             v-model="aiSettings.baseUrl"
             label="Base URL"
-            :placeholder="aiSettings.provider === 'claude' ? 'https://api.anthropic.com' : 'https://generativelanguage.googleapis.com'"
+            :placeholder="baseUrlPlaceholder"
             hint="Để trống để dùng mặc định"
             persistent-hint
             clearable
@@ -245,6 +246,15 @@ const appUrlRules = [
   (v: string) => !v || /^https?:\/\/.+/.test(v) || 'URL phải bắt đầu bằng http:// hoặc https://',
   (v: string) => !v || !v.endsWith('/') || 'URL không nên có dấu / ở cuối',
 ]
+
+const baseUrlPlaceholder = computed(() => {
+  switch (aiSettings.provider) {
+    case 'gemini': return 'https://generativelanguage.googleapis.com'
+    case 'openai': return 'https://api.openai.com/v1'
+    case 'xai': return 'https://api.x.ai/v1'
+    default: return 'https://api.anthropic.com'
+  }
+})
 
 function fallbackModels(provider: string) {
   switch (provider) {

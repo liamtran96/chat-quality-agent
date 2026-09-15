@@ -18,9 +18,13 @@ Vào menu **Cài đặt** > tab **Cấu hình AI**.
 | **Grok** (xAI) | Giá cạnh tranh | Ít được kiểm chứng với việc chấm chất lượng chat tiếng Việt |
 
 ::: tip Dùng được cả proxy
-ChatGPT và Grok đi qua cùng một chuẩn giao tiếp, nên mục **Tùy chỉnh API URL** cũng
-dùng được với OpenRouter, LiteLLM hay máy chủ tự dựng theo chuẩn OpenAI — chọn
+Mục **Tùy chỉnh API URL** cho phép trỏ sang proxy hoặc máy chủ tự dựng thay vì gọi
+thẳng nhà cung cấp: OpenRouter, LiteLLM, CLIProxy, AI gateway nội bộ. ChatGPT và Grok
+dùng chung một chuẩn giao tiếp nên mọi proxy theo chuẩn OpenAI đều chạy được — chọn
 ChatGPT rồi điền URL của proxy.
+
+Sau khi điền URL và lưu cài đặt, bấm nút làm mới cạnh ô Model AI: danh sách model sẽ
+được lấy từ chính proxy đó, nên bạn thấy đúng những model proxy của mình hỗ trợ.
 :::
 
 ### Bước 2: Chọn Model
