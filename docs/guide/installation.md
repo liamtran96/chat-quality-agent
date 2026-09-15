@@ -108,6 +108,20 @@ docker compose logs app -f    # Chỉ xem app
 docker compose logs nginx -f  # Chỉ xem nginx
 ```
 
+## Lệnh quản trị
+
+Chạy trực tiếp trên server, không qua giao diện web:
+
+```bash
+# Đặt lại mật khẩu một tài khoản (dùng khi admin duy nhất quên mật khẩu)
+docker exec -it cqa-app /app/cqa-server reset-password
+
+# Xem phiên bản đang chạy
+docker exec cqa-app /app/cqa-server version
+```
+
+Chi tiết về đặt lại mật khẩu xem [Quên mật khẩu admin](/faq#quen-mat-khau-admin).
+
 ## Gỡ cài đặt
 
 ```bash

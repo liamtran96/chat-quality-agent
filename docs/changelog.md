@@ -12,6 +12,7 @@
 
 ### Tài liệu
 - **Quên mật khẩu admin**: viết lại mục trong FAQ — hướng dẫn cũ dùng `-u root -p$MYSQL_ROOT_PASSWORD` trong khi biến này không tồn tại ở shell của host nên chạy sẽ tắc, lại thiếu hẳn bước sinh mã hoá mật khẩu và gợi ý "thêm admin mới qua API" vốn không thực hiện được khi chưa đăng nhập được. Bổ sung cách xử lý khi bị khoá do đăng nhập sai 5 lần
+- **Tài liệu cài đặt**: thêm mục Lệnh quản trị liệt kê các lệnh chạy trực tiếp trên server
 
 ## v2026.03.30
 
