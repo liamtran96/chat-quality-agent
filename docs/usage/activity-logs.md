@@ -55,8 +55,18 @@ Ngược lại, chi phí từng lượt gọi AI có trang riêng: [Chi phí AI]
 
 **Truy vết khi dữ liệu biến mất.** `job.clear_results`, `channel.purge_conversations`, `job.delete`, `channel.delete` cho biết ai đã xoá và lúc nào.
 
-::: tip Lưu ý
-Nhật ký không tự xoá theo thời gian. Hệ thống chạy lâu thì bảng này lớn dần — đây thường là một trong những bảng nặng nhất của database.
+## Thời gian lưu
 
-Mọi thành viên trong công ty đều xem được nhật ký, kể cả tài khoản chỉ có quyền xem. Nhật ký có email người dùng, cân nhắc điều này khi mời người ngoài vào công ty.
-:::
+Mặc định giữ **90 ngày**, mỗi ngày lúc 3h15 sáng hệ thống tự xoá các dòng cũ hơn. Đổi bằng
+`ACTIVITY_LOG_RETENTION_DAYS` trong [biến môi trường](/reference/env-vars), đặt `0` để giữ mãi.
+
+Cần giữ dài hơn cho mục đích kiểm toán thì tăng số ngày lên, nhưng nhớ rằng bảng này chỉ ghi
+thêm chứ không tự vơi.
+
+## Ai xem được
+
+Chủ sở hữu và quản trị viên luôn xem được. Thành viên thường phải có quyền đọc mục **Cài đặt**
+mới thấy menu này và mới gọi được dữ liệu — nhật ký chứa email và địa chỉ IP đăng nhập của người
+dùng nên không mở cho mọi thành viên.
+
+Phân quyền xem [Người dùng & phân quyền](/admin/users).

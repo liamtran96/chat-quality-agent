@@ -31,6 +31,9 @@ type Config struct {
 	AIMaxTokens int // max tokens for AI responses
 
 	// Đồng bộ bảng giá model từ nguồn ngoài
+	// ActivityLogRetentionDays: số ngày giữ nhật ký hệ thống, 0 là giữ mãi.
+	ActivityLogRetentionDays int
+
 	PricingSyncEnabled  bool
 	PricingSyncURL      string
 	PricingSyncInterval time.Duration
@@ -53,6 +56,8 @@ func Load() (*Config, error) {
 		RateLimitPerIP:   getEnvInt("RATE_LIMIT_PER_IP", 500),
 		RateLimitPerUser: getEnvInt("RATE_LIMIT_PER_USER", 1000),
 		AIMaxTokens:      getEnvInt("AI_MAX_TOKENS", 16384),
+
+		ActivityLogRetentionDays: getEnvInt("ACTIVITY_LOG_RETENTION_DAYS", 90),
 
 		PricingSyncEnabled: getEnv("PRICING_SYNC_ENABLED", "true") == "true",
 		PricingSyncURL: getEnv("PRICING_SYNC_URL",

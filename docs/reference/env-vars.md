@@ -34,8 +34,21 @@ Danh sách đầy đủ các biến môi trường trong file `.env`.
 
 | Biến | Mô tả | Mặc định |
 |------|-------|----------|
-| `RATE_LIMIT_PER_IP` | Số request/phút cho mỗi IP | `100` |
-| `RATE_LIMIT_PER_USER` | Số request/phút cho mỗi user | `300` |
+| `RATE_LIMIT_PER_IP` | Số request/phút cho mỗi IP | `500` |
+| `RATE_LIMIT_PER_USER` | Số request/phút cho mỗi user | `1000` |
+
+## Nhật ký hệ thống (tùy chọn)
+
+| Biến | Mô tả | Mặc định |
+|------|-------|----------|
+| `ACTIVITY_LOG_RETENTION_DAYS` | Số ngày giữ [nhật ký hệ thống](/usage/activity-logs). Đặt `0` để giữ mãi | `90` |
+
+Nhật ký chỉ ghi thêm chứ không bao giờ tự vơi, chạy lâu là thành một trong những bảng nặng nhất
+database. Mỗi ngày lúc 3h15 sáng, CQA xoá các dòng cũ hơn số ngày cấu hình, xoá theo lô để không
+khoá bảng lâu.
+
+Cần giữ dài hơn cho mục đích kiểm toán thì tăng số ngày, hoặc đặt `0` rồi tự sao lưu bảng
+`activity_logs` định kỳ.
 
 ## Đồng bộ bảng giá AI (tùy chọn)
 

@@ -58,6 +58,18 @@ func (s *Scheduler) Start() {
 		log.Printf("[scheduler] failed to create sync job: %v", err)
 	}
 
+	// Dọn nhật ký hệ thống quá hạn, 3h15 sáng — tránh giờ các công việc phân tích chạy
+	if s.cfg.ActivityLogRetentionDays > 0 {
+		_, err := s.scheduler.NewJob(
+			gocron.CronJob("15 3 * * *", false),
+			gocron.NewTask(func() { PruneActivityLogs(s.cfg.ActivityLogRetentionDays) }),
+			gocron.WithName("prune-activity-logs"),
+		)
+		if err != nil {
+			log.Printf("[scheduler] failed to create activity log cleanup job: %v", err)
+		}
+	}
+
 	// Load and schedule cron-based analysis jobs
 	s.loadCronJobs()
 
@@ -144,6 +156,40 @@ func (s *Scheduler) syncAllChannelsTask() {
 	if synced > 0 {
 		log.Printf("[scheduler] synced %d/%d channels", synced, len(chans))
 	}
+}
+
+// PruneActivityLogs xoá nhật ký hệ thống cũ hơn số ngày cấu hình. Bảng này chỉ
+// ghi thêm, không bao giờ tự vơi, nên chạy lâu là thành một trong những bảng
+// nặng nhất database.
+//
+// Xoá theo lô để không khoá bảng lâu. Trả về số dòng đã xoá.
+func PruneActivityLogs(retentionDays int) int64 {
+	if retentionDays <= 0 {
+		return 0
+	}
+	cutoff := time.Now().AddDate(0, 0, -retentionDays)
+
+	const batchSize = 5000
+	var total int64
+	// Trần vòng lặp để một lần chạy không kéo dài vô hạn khi tồn đọng quá lớn;
+	// phần còn lại để lượt chạy hôm sau.
+	for i := 0; i < 200; i++ {
+		res := db.DB.Where("created_at < ?", cutoff).
+			Limit(batchSize).
+			Delete(&models.ActivityLog{})
+		if res.Error != nil {
+			log.Printf("[scheduler] lỗi dọn nhật ký hệ thống: %v", res.Error)
+			return total
+		}
+		total += res.RowsAffected
+		if res.RowsAffected < batchSize {
+			break
+		}
+	}
+	if total > 0 {
+		log.Printf("[scheduler] đã dọn %d dòng nhật ký hệ thống cũ hơn %d ngày", total, retentionDays)
+	}
+	return total
 }
 
 // tenantTimezone returns the timezone configured for a tenant, defaulting to Asia/Ho_Chi_Minh.

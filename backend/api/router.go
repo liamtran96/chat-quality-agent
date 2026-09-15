@@ -168,11 +168,12 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			tenant.GET("/jobs/:jobId/runs/:runId/results", middleware.RequirePermission("jobs", "r"), handlers.ListJobResults)
 			tenant.POST("/test-output", middleware.RequirePermission("jobs", "w"), handlers.TestOutput)
 
-			// Activity Logs
-			tenant.GET("/activity-logs", handlers.ListActivityLogs)
+			// Activity Logs — nhật ký có email và IP đăng nhập của người dùng,
+			// khoá theo cùng quyền mà menu bên giao diện vốn đã dùng để ẩn/hiện.
+			tenant.GET("/activity-logs", middleware.RequirePermission("settings", "r"), handlers.ListActivityLogs)
 
 			// Cost Logs
-			tenant.GET("/cost-logs", handlers.ListCostLogs)
+			tenant.GET("/cost-logs", middleware.RequirePermission("settings", "r"), handlers.ListCostLogs)
 
 			// Users (tenant members management)
 			tenant.GET("/users", handlers.ListTenantUsers)

@@ -3,6 +3,7 @@
 ## v2026.09.15
 
 ### Tính năng mới
+- **Tự dọn nhật ký hệ thống**: bảng nhật ký chỉ ghi thêm nên chạy lâu là phình to. Nay mỗi ngày 3h15 sáng hệ thống xoá các dòng cũ hơn 90 ngày, xoá theo lô để không khoá bảng. Đổi số ngày bằng `ACTIVITY_LOG_RETENTION_DAYS`, đặt `0` để giữ mãi như trước
 - **Lệnh dọn bản đánh giá trùng**: `prune-duplicate-results` giữ lại kết quả của lượt chạy gần nhất mỗi cặp (công việc, cuộc chat) và xoá các lượt cũ hơn, dành cho bản cài đã tích dữ liệu trùng từ lỗi đánh giá lặp. Mặc định chỉ in bản kê, phải thêm `-apply` và gõ xác nhận mới xoá; từ chối chạy khi còn công việc đang chạy dở; xoá xong tự đối chiếu lại số dòng và số cặp. Chỉ đụng tới bảng `job_results`
 - **Script sao lưu tự kiểm chứng**: `scripts/backup-db.sh` dump toàn bộ database rồi phục hồi thử sang database tạm và đối chiếu số dòng từng bảng, lệch một dòng là dừng và báo lỗi. Database tạm tự xoá sau khi kiểm xong, dữ liệu đang chạy chỉ được đọc
 - **Danh sách model gọn lại**: bỏ hai mục gắn nhãn CLIProxy khỏi danh sách có sẵn. Ai dùng proxy nay điền URL rồi bấm làm mới để lấy đúng danh sách model của proxy mình, không phải chọn từ danh sách đoán trước. Model đang dùng vẫn được giữ nguyên
@@ -14,6 +15,7 @@
 - **Script `scripts/reset-password.sh`**: làm việc tương tự cho bản cài chưa cập nhật, tự chuyển sang dùng lệnh trong ứng dụng nếu bản cài đã có
 
 ### Sửa lỗi
+- **Nhật ký hệ thống và chi phí AI ai cũng gọi được**: giao diện đã ẩn hai mục này với thành viên không có quyền đọc Cài đặt, nhưng hai endpoint tương ứng lại không kiểm quyền nên vẫn gọi thẳng được — nhật ký chứa email và IP đăng nhập của người dùng. Nay hai endpoint kiểm đúng quyền mà menu vốn đã dùng
 - **Bộ lọc nhật ký hệ thống trả về rỗng**: ba lựa chọn trong ô lọc (`job.create`, `ai.error`, `settings`) không ứng với hành động nào được ghi nên chọn vào là bảng trắng, trông như hệ thống không ghi nhật ký. Nay ô lọc chỉ liệt kê các hành động thực sự có, bổ sung đồng bộ kênh, xoá dữ liệu công việc và đăng nhập
 - **Cuộc chat cũ bị đánh giá lại mỗi ngày**: công việc chạy theo lịch lấy mốc quét từ bản sao nạp lúc đăng ký lịch, mà bản sao đó không bao giờ đọc lại `last_run_at` mới. Mốc quét vì thế đứng yên ở thời điểm ứng dụng khởi động, mỗi ngày job quét lại toàn bộ hội thoại kể từ mốc đó. Truy vấn lại không có thứ tự cố định và không loại cuộc chat đã đánh giá, nên ngày nào cũng gặp đúng nhóm cũ nhất rồi hết giờ: cuộc chat mới không tới lượt, cuộc chat cũ thì tích thêm bản đánh giá trùng. Nay mỗi lượt chạy đọc lại công việc từ database, quét từ cũ đến mới, bỏ qua cuộc chat đã có đánh giá mới hơn tin nhắn cuối, và lượt chạy bị cắt vì hết giờ được ghi trạng thái `partial` đồng thời giữ nguyên mốc quét để phần còn lại vào lần sau
 - **Không còn đoán giá model lạ**: trước đây model không có trong bảng giá bị tính theo giá của một model khác, khiến chi phí sai mà không ai biết. Nay model chưa rõ giá được ghi nhận là chưa tính được kèm cảnh báo trong log, thay vì cho ra một con số sai trông như đúng
@@ -29,6 +31,7 @@
 - **Chứng chỉ hết hạn không tự cấp lại**: chứng chỉ để quá hạn lâu thì lệnh gia hạn bị Let's Encrypt từ chối vì bản cũ đã bị xoá khỏi hệ thống, mà luồng khởi động lại chỉ biết gia hạn nên kẹt vĩnh viễn — nay tự chuyển sang cấp mới khi gia hạn hỏng
 
 ### Tài liệu
+- **Biến môi trường**: thêm mục nhật ký hệ thống, và sửa mặc định giới hạn tần suất đang ghi sai (`100`/`300` trong khi mã dùng `500`/`1000`)
 - **Nhật ký hệ thống**: thêm trang tài liệu cho mục này — các hành động được ghi, cách dùng để kiểm tra công việc có chạy không, và những gì chỉ có trong log ứng dụng chứ không lên giao diện
 - **Cài đặt**: thêm mục sao lưu database và mục dọn bản đánh giá trùng, kèm các bước làm theo thứ tự
 - **Công việc**: bổ sung cách hoạt động của lần chạy tự động (không đánh giá lại cuộc chat cũ) và bảng ý nghĩa các trạng thái lần chạy
