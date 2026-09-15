@@ -23,11 +23,11 @@ func (m *MockAIProvider) AnalyzeChat(ctx context.Context, systemPrompt string, c
 
 func TestMockAIProviderQCPass(t *testing.T) {
 	passResponse := map[string]interface{}{
-		"verdict": "PASS",
-		"score":   90,
-		"review":  "Cuộc chat tốt, nhân viên lịch sự và giải đáp đầy đủ.",
+		"verdict":    "PASS",
+		"score":      90,
+		"review":     "Cuộc chat tốt, nhân viên lịch sự và giải đáp đầy đủ.",
 		"violations": []interface{}{},
-		"summary": "Khách hàng hỏi về sản phẩm, nhân viên trả lời chi tiết.",
+		"summary":    "Khách hàng hỏi về sản phẩm, nhân viên trả lời chi tiết.",
 	}
 	respJSON, _ := json.Marshal(passResponse)
 
@@ -137,9 +137,13 @@ func TestCalculateCostUSD(t *testing.T) {
 		maxCost  float64
 	}{
 		{"claude sonnet small", "claude", "claude-sonnet-4-6", 1000, 500, 0.01, 0.02},
-		{"claude haiku cheap", "claude", "claude-haiku-3-5", 1000, 500, 0.001, 0.005},
+		{"claude haiku cheap", "claude", "claude-haiku-4-5", 1000, 500, 0.001, 0.005},
 		{"gemini flash very cheap", "gemini", "gemini-2.0-flash", 1000, 500, 0.0001, 0.001},
 		{"zero tokens", "claude", "claude-sonnet-4-6", 0, 0, 0, 0},
+		// Model lạ rơi về giá mặc định của nhà cung cấp, không được trả 0
+		{"claude model la dung gia mac dinh", "claude", "model-khong-ton-tai", 1000, 500, 0.01, 0.02},
+		{"gemini model la dung gia mac dinh", "gemini", "model-khong-ton-tai", 1000, 500, 0.0001, 0.001},
+		{"nha cung cap la tra 0", "openai", "gpt-4", 1000, 500, 0, 0},
 	}
 
 	for _, tt := range tests {

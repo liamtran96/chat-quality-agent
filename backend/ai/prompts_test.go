@@ -7,7 +7,7 @@ import (
 
 func TestBuildQCPrompt(t *testing.T) {
 	rules := "## Phải chào hỏi lịch sự"
-	prompt := BuildQCPrompt(rules)
+	prompt := BuildQCPrompt(rules, "")
 
 	if !strings.Contains(prompt, rules) {
 		t.Error("QC prompt should contain the rules content")
@@ -17,6 +17,25 @@ func TestBuildQCPrompt(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "JSON") {
 		t.Error("QC prompt should request JSON output")
+	}
+	if strings.Contains(prompt, "Điều kiện bỏ qua") {
+		t.Error("QC prompt should not have a skip section when skipConditions is empty")
+	}
+}
+
+func TestBuildQCPromptWithSkipConditions(t *testing.T) {
+	rules := "## Phải chào hỏi lịch sự"
+	skip := "Chat chỉ có 1 tin nhắn"
+	prompt := BuildQCPrompt(rules, skip)
+
+	if !strings.Contains(prompt, skip) {
+		t.Error("QC prompt should contain the skip conditions")
+	}
+	if !strings.Contains(prompt, "SKIP") {
+		t.Error("QC prompt should tell the model to return SKIP verdict")
+	}
+	if !strings.Contains(prompt, rules) {
+		t.Error("QC prompt should still contain the rules content")
 	}
 }
 
