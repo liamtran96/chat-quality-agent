@@ -142,7 +142,7 @@ func TestCalculateCostUSD(t *testing.T) {
 		{"zero tokens", "claude", "claude-sonnet-4-6", 0, 0, 0, 0},
 		// Model lạ rơi về giá mặc định của nhà cung cấp, không được trả 0
 		{"claude model la dung gia mac dinh", "claude", "model-khong-ton-tai", 1000, 500, 0.01, 0.02},
-		{"gemini model la dung gia mac dinh", "gemini", "model-khong-ton-tai", 1000, 500, 0.0001, 0.001},
+		{"gemini model la dung gia mac dinh", "gemini", "model-khong-ton-tai", 1000, 500, 0.002, 0.003},
 		{"nha cung cap la tra 0", "openai", "gpt-4", 1000, 500, 0, 0},
 	}
 
@@ -151,6 +151,45 @@ func TestCalculateCostUSD(t *testing.T) {
 			cost := ai.CalculateCostUSD(tt.provider, tt.model, tt.input, tt.output)
 			if cost < tt.minCost || cost > tt.maxCost {
 				t.Errorf("cost %f out of range [%f, %f]", cost, tt.minCost, tt.maxCost)
+			}
+		})
+	}
+}
+
+// TestCalculateCostUSDExactRates khoá giá từng model theo bảng giá chính thức
+// đối chiếu ngày 2026-09-15. Nhà cung cấp đổi giá thì test này đỏ trước, thay vì
+// âm thầm báo sai chi phí cho người dùng.
+func TestCalculateCostUSDExactRates(t *testing.T) {
+	const million = 1_000_000
+
+	rates := []struct {
+		provider   string
+		model      string
+		inputRate  float64
+		outputRate float64
+	}{
+		{"claude", "claude-haiku-4-5", 1.00, 5.00},
+		{"claude", "claude-sonnet-5", 2.00, 10.00},
+		{"claude", "claude-sonnet-4-6", 3.00, 15.00},
+		{"claude", "claude-opus-5", 5.00, 25.00},
+		{"claude", "claude-opus-4-6", 5.00, 25.00},
+		{"claude", "claude-fable-5-1", 10.00, 50.00},
+		{"gemini", "gemini-3.8-flash", 0.75, 3.75},
+		{"gemini", "gemini-3.5-flash", 1.50, 9.00},
+		{"gemini", "gemini-3.5-flash-lite", 0.30, 2.50},
+		{"gemini", "gemini-3.1-flash-lite", 0.25, 1.50},
+		{"gemini", "gemini-2.5-pro", 1.25, 10.00},
+		{"gemini", "gemini-2.5-flash", 0.30, 2.50},
+		{"gemini", "gemini-2.5-flash-lite", 0.10, 0.40},
+	}
+
+	for _, r := range rates {
+		t.Run(r.model, func(t *testing.T) {
+			// Một triệu token vào, một triệu token ra thì chi phí đúng bằng tổng hai đơn giá.
+			got := ai.CalculateCostUSD(r.provider, r.model, million, million)
+			want := r.inputRate + r.outputRate
+			if diff := got - want; diff > 0.000001 || diff < -0.000001 {
+				t.Errorf("%s: chi phí %f, mong đợi %f", r.model, got, want)
 			}
 		})
 	}

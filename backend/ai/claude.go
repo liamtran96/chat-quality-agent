@@ -19,7 +19,7 @@ type ClaudeProvider struct {
 
 func NewClaudeProvider(apiKey, model string, maxTokens int, baseURL string) *ClaudeProvider {
 	if model == "" {
-		model = "claude-sonnet-4-6"
+		model = "claude-sonnet-5"
 	}
 	if maxTokens <= 0 {
 		maxTokens = 16384

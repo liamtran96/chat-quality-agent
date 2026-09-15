@@ -188,22 +188,27 @@ const tabs = [
   { label: 'general', value: 'general', icon: 'mdi-cog' },
 ]
 
+// Danh sách đối chiếu ngày 2026-09-15. Model thế hệ cũ vẫn giữ lại để ai đang
+// dùng không bị mất lựa chọn, nhưng ghi rõ là cũ.
 const claudeModels = [
-  { title: 'Claude Sonnet 4.6 (Recommended)', value: 'claude-sonnet-4-6' },
-  { title: 'Claude Haiku 4.5 (Fast & Cheap)', value: 'claude-haiku-4-5-20251001' },
-  { title: 'Claude Opus 4 (Most Capable)', value: 'claude-opus-4' },
-  { title: 'Claude Sonnet 4.5 (CLIProxy)', value: 'claude-sonnet-4-5-20250929' },
-  { title: 'Claude Opus 4.6 (CLIProxy)', value: 'claude-opus-4-6' },
+  { title: 'Claude Sonnet 5 (Khuyến nghị)', value: 'claude-sonnet-5' },
+  { title: 'Claude Haiku 4.5 (Nhanh & rẻ)', value: 'claude-haiku-4-5' },
+  { title: 'Claude Opus 5 (Mạnh nhất)', value: 'claude-opus-5' },
+  { title: 'Claude Sonnet 4.6 (Thế hệ cũ)', value: 'claude-sonnet-4-6' },
+  { title: 'Claude Opus 4.6 (Thế hệ cũ)', value: 'claude-opus-4-6' },
 ]
 const geminiModels = [
-  { title: 'Gemini 2.5 Flash (Fast & Cheap)', value: 'gemini-2.5-flash' },
-  { title: 'Gemini 2.5 Flash Lite (Fastest)', value: 'gemini-2.5-flash-lite' },
-  { title: 'Gemini 2.5 Pro (Most Capable)', value: 'gemini-2.5-pro' },
+  { title: 'Gemini 3.8 Flash (Khuyến nghị)', value: 'gemini-3.8-flash' },
+  { title: 'Gemini 3.1 Flash Lite (Nhanh & rẻ nhất)', value: 'gemini-3.1-flash-lite' },
+  { title: 'Gemini 3.5 Flash Lite (Rẻ)', value: 'gemini-3.5-flash-lite' },
+  { title: 'Gemini 3.5 Flash (Mạnh hơn)', value: 'gemini-3.5-flash' },
+  { title: 'Gemini 2.5 Pro (Thế hệ cũ)', value: 'gemini-2.5-pro' },
+  { title: 'Gemini 2.5 Flash (Thế hệ cũ)', value: 'gemini-2.5-flash' },
 ]
 
 const useCustomBaseUrl = ref(false)
 const hasSavedKey = ref(false)
-const aiSettings = reactive({ provider: 'claude', model: 'claude-sonnet-4-6', apiKey: '', baseUrl: '', batchMode: true, batchSize: 5 })
+const aiSettings = reactive({ provider: 'claude', model: 'claude-sonnet-5', apiKey: '', baseUrl: '', batchMode: true, batchSize: 5 })
 const generalSettings = reactive({ companyName: '', timezone: 'Asia/Ho_Chi_Minh', language: 'vi', exchangeRate: 26000, appUrl: '' })
 
 const appUrlRules = [
@@ -217,7 +222,7 @@ const modelOptions = computed(() => {
 
 function onProviderChange() {
   // Reset to default model when switching provider
-  aiSettings.model = aiSettings.provider === 'claude' ? 'claude-sonnet-4-6' : 'gemini-2.5-flash'
+  aiSettings.model = aiSettings.provider === 'claude' ? 'claude-sonnet-5' : 'gemini-3.8-flash'
 }
 
 async function loadSettings() {

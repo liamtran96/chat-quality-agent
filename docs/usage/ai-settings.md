@@ -17,18 +17,36 @@ Vào menu **Cài đặt** > tab **Cấu hình AI**.
 
 ### Bước 2: Chọn Model
 
+Giá dưới đây tính theo USD cho mỗi 1 triệu token, đối chiếu bảng giá chính thức
+ngày 15/09/2026. Nhà cung cấp có thể đổi giá, hãy kiểm tra lại trước khi tính toán
+chi phí dài hạn.
+
 **Claude:**
-| Model | Đặc điểm | Phù hợp |
-|-------|----------|---------|
-| Claude Sonnet 4.6 | Cân bằng chất lượng và chi phí | Khuyến nghị cho hầu hết trường hợp |
-| Claude Haiku 4.5 | Nhanh, rẻ nhất | Số lượng chat lớn, budget hạn chế |
-| Claude Opus 4 | Mạnh nhất, đắt nhất | Yêu cầu phân tích phức tạp |
+| Model | Giá vào / ra | Phù hợp |
+|-------|--------------|---------|
+| Claude Sonnet 5 | $2 / $10 | Khuyến nghị cho hầu hết trường hợp |
+| Claude Haiku 4.5 | $1 / $5 | Số lượng chat lớn, ngân sách hạn chế |
+| Claude Opus 5 | $5 / $25 | Yêu cầu phân tích phức tạp |
+| Claude Sonnet 4.6 | $3 / $15 | Thế hệ cũ, giữ cho ai đang dùng |
+| Claude Opus 4.6 | $5 / $25 | Thế hệ cũ |
 
 **Gemini:**
-| Model | Đặc điểm | Phù hợp |
-|-------|----------|---------|
-| Gemini 2.0 Flash | Nhanh, rẻ | Phân loại đơn giản |
-| Gemini 2.5 Pro | Mạnh hơn | Phân tích chi tiết |
+| Model | Giá vào / ra | Phù hợp |
+|-------|--------------|---------|
+| Gemini 3.8 Flash | $0.75 / $3.75 | Khuyến nghị, mới nhất |
+| Gemini 3.1 Flash Lite | $0.25 / $1.50 | Rẻ nhất, phân loại đơn giản |
+| Gemini 3.5 Flash Lite | $0.30 / $2.50 | Rẻ |
+| Gemini 3.5 Flash | $1.50 / $9 | Mạnh hơn |
+| Gemini 2.5 Pro | $1.25 / $10 | Thế hệ cũ |
+| Gemini 2.5 Flash | $0.30 / $2.50 | Thế hệ cũ |
+
+::: warning Gemini 2.0 Flash đã ngừng hoạt động
+Google đã dừng model này. Nếu cấu hình của bạn còn đang chọn nó, hãy đổi sang một
+model Gemini 3.x ở bảng trên.
+:::
+
+Giá của Gemini 3.8, 3.7 và 3.6 Flash đang trong giai đoạn ưu đãi và sẽ tăng gấp đôi
+từ 01/01/2027.
 
 ### Bước 3: Nhập API Key
 
