@@ -35,9 +35,35 @@ Vào menu **Cài đặt** > tab **Cấu hình AI**.
 - **Claude**: Lấy key tại [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
 - **Gemini**: Lấy key tại [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
 
-Nhập key vào ô **API Key**, bấm **Test API Key** — nếu hiện tick xanh "Kết nối thành công" là OK.
+Nhập key vào ô **API Key** rồi bấm **Lưu cài đặt**.
 
-Bấm **Lưu cấu hình**.
+Sau đó bấm **Kiểm tra API Key**. Nút này gọi thật một lượt tới nhà cung cấp bằng
+key vừa lưu (tốn vài token, không đáng kể), nên kết quả phản ánh đúng tình trạng key:
+
+| Thông báo | Ý nghĩa |
+|---|---|
+| Kết nối thành công | Key dùng được với model đang chọn |
+| API key không hợp lệ hoặc không có quyền truy cập | Key sai, đã bị thu hồi, hoặc không có quyền |
+| API key đã hết hạn mức hoặc bị giới hạn tần suất | Thường gặp với key miễn phí — chờ hạn mức khôi phục hoặc nâng cấp tài khoản |
+| Model đang chọn không dùng được với API key này | Đổi sang model khác |
+| Không kết nối được tới nhà cung cấp | Mạng hoặc tường lửa chặn |
+| Không giải mã được API key đã lưu | Xem mục bên dưới |
+
+::: tip Đã lưu key rồi thì không phải nhập lại
+Ô API Key hiển thị `••••••••` nghĩa là đã có key lưu sẵn. Muốn đổi model hay cỡ lô,
+cứ để nguyên ô đó rồi **Lưu cài đặt** — key cũ được giữ nguyên. Chỉ nhập lại khi
+muốn thay key.
+:::
+
+### Không giải mã được API key đã lưu
+
+Key được mã hoá bằng `ENCRYPTION_KEY` trong file `.env`. Nếu giá trị này bị đổi
+(cài lại, sinh key mới, khôi phục nhầm bản `.env`) thì mọi thứ đã mã hoá trước đó —
+API key lẫn thông tin kết nối kênh chat — không giải mã được nữa, trong khi giao diện
+vẫn hiển thị `••••••••` như thể đã cấu hình xong.
+
+Cách xử lý: nhập lại API key và kết nối lại các kênh chat. Sau đó giữ nguyên
+`ENCRYPTION_KEY`, đừng đổi nữa.
 
 ## Batch Mode
 

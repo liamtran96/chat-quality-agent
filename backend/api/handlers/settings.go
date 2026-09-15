@@ -1,18 +1,29 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vietbui/chat-quality-agent/ai"
 	"github.com/vietbui/chat-quality-agent/api/middleware"
 	"github.com/vietbui/chat-quality-agent/config"
 	"github.com/vietbui/chat-quality-agent/db"
 	"github.com/vietbui/chat-quality-agent/db/models"
 	"github.com/vietbui/chat-quality-agent/pkg"
 	"golang.org/x/crypto/bcrypt"
+)
+
+// Tham số của riêng phép thử API key — cố ý đặt cực nhỏ để mỗi lần bấm kiểm tra
+// chỉ tốn vài token, không liên quan tới cấu hình dùng khi chạy đánh giá thật.
+const (
+	testKeyMaxTokens    = 16
+	testKeySystemPrompt = "Trả lời đúng một từ: OK"
+	testKeyUserMessage  = "ping"
 )
 
 // GetSettings returns all non-secret settings for the tenant
@@ -59,8 +70,10 @@ func getSettingValue(settings []models.AppSetting, key, defaultVal string) strin
 func SaveAISettings(c *gin.Context) {
 	tenantID := middleware.GetTenantID(c)
 	var req struct {
-		Provider  string `json:"provider" binding:"required,oneof=claude gemini"`
-		APIKey    string `json:"api_key" binding:"required"`
+		Provider string `json:"provider" binding:"required,oneof=claude gemini"`
+		// Để trống nghĩa là giữ nguyên key đã lưu — người dùng không phải nhập
+		// lại key mỗi lần chỉ muốn đổi model hay cỡ lô.
+		APIKey    string `json:"api_key"`
 		Model     string `json:"model"`
 		BaseURL   string `json:"base_url"`
 		BatchMode string `json:"batch_mode"`
@@ -71,7 +84,12 @@ func SaveAISettings(c *gin.Context) {
 		return
 	}
 
-	cfg, _ := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Printf("[security] loading config failed while saving AI settings: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "config_error"})
+		return
+	}
 
 	// Save provider (plain)
 	upsertSetting(tenantID, "ai_provider", req.Provider, nil)
@@ -89,13 +107,22 @@ func SaveAISettings(c *gin.Context) {
 		db.DB.Where("tenant_id = ? AND setting_key = ?", tenantID, "ai_base_url").Delete(&models.AppSetting{})
 	}
 
-	// Save API key (encrypted)
-	encrypted, err := pkg.Encrypt([]byte(req.APIKey), cfg.EncryptionKey)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "encryption_failed"})
-		return
+	// Save API key (encrypted). Bỏ trống thì giữ key cũ, nhưng phải có sẵn key
+	// từ trước, nếu không thì cấu hình sẽ không dùng được.
+	if req.APIKey != "" {
+		encrypted, err := pkg.Encrypt([]byte(req.APIKey), cfg.EncryptionKey)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "encryption_failed"})
+			return
+		}
+		upsertSetting(tenantID, "ai_api_key", "", encrypted)
+	} else {
+		var existing models.AppSetting
+		if err := db.DB.Where("tenant_id = ? AND setting_key = ?", tenantID, "ai_api_key").First(&existing).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "api_key_required"})
+			return
+		}
 	}
-	upsertSetting(tenantID, "ai_api_key", "", encrypted)
 
 	// Save batch settings
 	if req.BatchMode != "" {
@@ -128,46 +155,128 @@ func SaveAnalysisSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "saved"})
 }
 
-// TestAIKey tests the AI API key by making a simple request
+// testKeyTimeout giới hạn thời gian chờ khi thử API key, để nút kiểm tra không
+// treo quá lâu khi nhà cung cấp chậm hoặc đang chặn vì hết hạn mức.
+const testKeyTimeout = 30 * time.Second
+
+// classifyProviderError quy lỗi từ nhà cung cấp về một lý do dễ hiểu cho người
+// dùng. Không trả nguyên văn lỗi ra ngoài để tránh lộ chi tiết nội bộ.
+func classifyProviderError(err error) (code string, message string) {
+	msg := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(msg, "401") || strings.Contains(msg, "403") ||
+		strings.Contains(msg, "unauthenticated") || strings.Contains(msg, "permission") ||
+		strings.Contains(msg, "api key not valid") || strings.Contains(msg, "invalid_api_key") ||
+		strings.Contains(msg, "authentication"):
+		return "invalid_api_key", "API key không hợp lệ hoặc không có quyền truy cập"
+	case strings.Contains(msg, "429") || strings.Contains(msg, "quota") ||
+		strings.Contains(msg, "rate") || strings.Contains(msg, "resource_exhausted"):
+		return "quota_exceeded", "API key đã hết hạn mức hoặc bị giới hạn tần suất"
+	case strings.Contains(msg, "404") || strings.Contains(msg, "not found") ||
+		strings.Contains(msg, "model"):
+		return "model_unavailable", "Model đang chọn không dùng được với API key này"
+	case strings.Contains(msg, "timeout") || strings.Contains(msg, "deadline") ||
+		strings.Contains(msg, "connection") || strings.Contains(msg, "no such host"):
+		return "connection_failed", "Không kết nối được tới nhà cung cấp"
+	default:
+		return "test_failed", "Gọi thử tới nhà cung cấp không thành công"
+	}
+}
+
+// TestAIKey thử API key bằng một lượt gọi thật tới nhà cung cấp.
+//
+// Trước đây hàm này chỉ kiểm tra có key trong database rồi báo thành công, nên
+// key sai hay hết hạn mức vẫn hiện xanh và người dùng chỉ phát hiện khi công
+// việc chạy thật mà không ra kết quả.
 func TestAIKey(c *gin.Context) {
 	tenantID := middleware.GetTenantID(c)
-	cfg, _ := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Printf("[security] loading config failed while testing AI key: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "config_error"})
+		return
+	}
 
 	// Get the encrypted API key
 	var setting models.AppSetting
 	if err := db.DB.Where("tenant_id = ? AND setting_key = ?", tenantID, "ai_api_key").First(&setting).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no_api_key_configured"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no_api_key_configured", "message": "Chưa cấu hình API key"})
 		return
 	}
 
-	apiKey, err := pkg.Decrypt(setting.ValueEncrypted, cfg.EncryptionKey)
+	apiKeyBytes, err := pkg.Decrypt(setting.ValueEncrypted, cfg.EncryptionKey)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "decrypt_failed"})
+		// Hay gặp khi ENCRYPTION_KEY bị đổi sau khi đã lưu key: dữ liệu cũ không
+		// giải mã được nữa và phải nhập lại key.
+		log.Printf("[security] decrypt AI key failed: tenant=%s", tenantID)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "decrypt_failed",
+			"message": "Không giải mã được API key đã lưu, vui lòng nhập lại. Thường xảy ra khi ENCRYPTION_KEY trong .env bị thay đổi",
+		})
 		return
 	}
 
-	// Get provider
-	var providerSetting models.AppSetting
 	provider := "claude"
-	if err := db.DB.Where("tenant_id = ? AND setting_key = ?", tenantID, "ai_provider").First(&providerSetting).Error; err == nil {
+	var providerSetting models.AppSetting
+	if err := db.DB.Where("tenant_id = ? AND setting_key = ?", tenantID, "ai_provider").First(&providerSetting).Error; err == nil && providerSetting.ValuePlain != "" {
 		provider = providerSetting.ValuePlain
 	}
 
-	_ = apiKey
-	_ = provider
-	// TODO: Actually test the API key by calling the provider
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "provider": provider, "message": "API key configured"})
+	var model string
+	var modelSetting models.AppSetting
+	if err := db.DB.Where("tenant_id = ? AND setting_key = ?", tenantID, "ai_model").First(&modelSetting).Error; err == nil {
+		model = modelSetting.ValuePlain
+	}
+
+	var baseURL string
+	var baseURLSetting models.AppSetting
+	if err := db.DB.Where("tenant_id = ? AND setting_key = ?", tenantID, "ai_base_url").First(&baseURLSetting).Error; err == nil {
+		baseURL = baseURLSetting.ValuePlain
+	}
+
+	var client ai.AIProvider
+	switch provider {
+	case "claude":
+		client = ai.NewClaudeProvider(string(apiKeyBytes), model, testKeyMaxTokens, baseURL)
+	case "gemini":
+		client = ai.NewGeminiProvider(string(apiKeyBytes), model, baseURL)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported_provider", "message": "Nhà cung cấp không được hỗ trợ: " + provider})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), testKeyTimeout)
+	defer cancel()
+
+	resp, err := client.AnalyzeChat(ctx, testKeySystemPrompt, testKeyUserMessage)
+	if err != nil {
+		code, message := classifyProviderError(err)
+		log.Printf("[ai] test key failed: tenant=%s provider=%s reason=%s", tenantID, provider, code)
+		c.JSON(http.StatusBadRequest, gin.H{"error": code, "message": message, "provider": provider})
+		return
+	}
+
+	usedModel := resp.Model
+	if usedModel == "" {
+		usedModel = model
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status":   "ok",
+		"provider": provider,
+		"model":    usedModel,
+		"message":  "Kết nối thành công",
+	})
 }
 
 // SaveGeneralSettings saves general tenant settings
 func SaveGeneralSettings(c *gin.Context) {
 	tenantID := middleware.GetTenantID(c)
 	var req struct {
-		CompanyName    string  `json:"company_name"`
-		Timezone       string  `json:"timezone"`
-		Language       string  `json:"language"`
-		ExchangeRate   float64 `json:"exchange_rate_vnd"`
-		AppURL         string  `json:"app_url"`
+		CompanyName  string  `json:"company_name"`
+		Timezone     string  `json:"timezone"`
+		Language     string  `json:"language"`
+		ExchangeRate float64 `json:"exchange_rate_vnd"`
+		AppURL       string  `json:"app_url"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "details": err.Error()})
@@ -299,7 +408,7 @@ func upsertSetting(tenantID, key, plainValue string, encryptedValue []byte) {
 		setting := models.AppSetting{
 			ID:             pkg.NewUUID(),
 			TenantID:       tenantID,
-			SettingKey:      key,
+			SettingKey:     key,
 			ValuePlain:     plainValue,
 			ValueEncrypted: encryptedValue,
 			CreatedAt:      time.Now(),

@@ -202,6 +202,7 @@ const geminiModels = [
 ]
 
 const useCustomBaseUrl = ref(false)
+const hasSavedKey = ref(false)
 const aiSettings = reactive({ provider: 'claude', model: 'claude-sonnet-4-6', apiKey: '', baseUrl: '', batchMode: true, batchSize: 5 })
 const generalSettings = reactive({ companyName: '', timezone: 'Asia/Ho_Chi_Minh', language: 'vi', exchangeRate: 26000, appUrl: '' })
 
@@ -224,7 +225,10 @@ async function loadSettings() {
     const { data } = await api.get(`/tenants/${tenantId.value}/settings`)
     if (data.settings.ai_provider) aiSettings.provider = data.settings.ai_provider
     if (data.settings.ai_model) aiSettings.model = data.settings.ai_model
-    if (data.settings.ai_api_key) aiSettings.apiKey = data.settings.ai_api_key
+    if (data.settings.ai_api_key) {
+      aiSettings.apiKey = data.settings.ai_api_key
+      hasSavedKey.value = true
+    }
     if (data.settings.ai_base_url) {
       aiSettings.baseUrl = data.settings.ai_base_url
       useCustomBaseUrl.value = true
@@ -261,7 +265,10 @@ async function saveAnalysis() {
 }
 
 async function saveAI() {
-  if (!aiSettings.apiKey || aiSettings.apiKey === '••••••••') {
+  // Ô key hiển thị dấu chấm khi đã có key lưu sẵn. Gửi chuỗi rỗng để backend
+  // giữ nguyên key cũ, nhờ vậy đổi model hay cỡ lô không phải nhập lại key.
+  const apiKeyToSend = aiSettings.apiKey === '••••••••' ? '' : aiSettings.apiKey
+  if (!apiKeyToSend && !hasSavedKey.value) {
     showSnack('Vui lòng nhập API Key', 'error')
     return
   }
@@ -274,7 +281,7 @@ async function saveAI() {
     await api.put(`/tenants/${tenantId.value}/settings/ai`, {
       provider: aiSettings.provider,
       model: aiSettings.model,
-      api_key: aiSettings.apiKey,
+      api_key: apiKeyToSend,
       base_url: useCustomBaseUrl.value ? (aiSettings.baseUrl || '') : '',
       batch_mode: aiSettings.batchMode ? 'true' : 'false',
       batch_size: String(aiSettings.batchSize),
@@ -291,9 +298,11 @@ async function testKey() {
   testingKey.value = true
   try {
     const { data } = await api.post(`/tenants/${tenantId.value}/settings/ai/test`)
-    showSnack(`${data.provider}: ${data.message}`, 'success')
+    const detail = data.model ? `${data.provider} / ${data.model}` : data.provider
+    showSnack(`${detail}: ${data.message}`, 'success')
   } catch (err: any) {
-    showSnack(err.response?.data?.error || t('error'), 'error')
+    const res = err.response?.data
+    showSnack(res?.message || res?.error || t('error'), 'error')
   } finally {
     testingKey.value = false
   }

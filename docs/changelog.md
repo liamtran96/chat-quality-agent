@@ -7,6 +7,9 @@
 - **Script `scripts/reset-password.sh`**: làm việc tương tự cho bản cài chưa cập nhật, tự chuyển sang dùng lệnh trong ứng dụng nếu bản cài đã có
 
 ### Sửa lỗi
+- **Nút kiểm tra API key không kiểm tra gì** (#51): nút "Kiểm tra API Key" chỉ xem trong database có key hay không rồi báo xanh, không hề gọi tới Claude hay Gemini. Key sai, bị thu hồi hay hết hạn mức vẫn hiện "API key configured", người dùng chỉ phát hiện khi công việc chạy thật mà không ra kết quả. Nay nút này gọi thật một lượt tới nhà cung cấp và báo đúng lý do khi hỏng
+- **Phải nhập lại API key mỗi lần đổi cấu hình AI** (#11): ô key hiển thị dấu chấm khi đã lưu, nhưng lưu cài đặt lại bắt nhập key thật nên chỉ muốn đổi model cũng phải dán key vào lại, dễ tưởng là key bị mất. Nay để nguyên ô đó thì key cũ được giữ
+- **Không biết khi khoá mã hoá bị đổi**: đổi `ENCRYPTION_KEY` trong `.env` làm API key và thông tin kết nối kênh đã lưu không giải mã được, nhưng giao diện vẫn hiện như đã cấu hình xong. Nay báo rõ lý do và cách khắc phục
 - **Không có nút thêm công ty sau khi cài đặt** (#50): tạo tài khoản quản trị xong thì vào thẳng màn hình trống, không thao tác được gì. Màn hình cài đặt lưu phiên nhưng chưa nạp hồ sơ người dùng, mà bước sau lại chuyển trang trong ứng dụng nên không còn chỗ nào nạp — giao diện coi như chưa biết người dùng là quản trị viên và ẩn hết nút. Tải lại trang hoặc đăng nhập lại thì hết, nên lỗi chỉ xuất hiện đúng lần cài đầu tiên
 - **Đăng nhập sai không hiện thông báo**: bấm đăng nhập với mật khẩu sai thì trang chỉ nháy một cái rồi về lại như cũ, không báo gì. Bộ chặn lỗi hiểu nhầm 401 của trang đăng nhập thành hết hạn phiên nên đi làm mới phiên, hỏng tiếp rồi tải lại trang, xoá luôn dòng thông báo. Nay 401 từ các endpoint đăng nhập được để nguyên cho màn hình tự xử lý
 - **Báo nhầm khi tài khoản bị khoá**: đăng nhập sai 5 lần bị khoá 15 phút nhưng màn hình vẫn báo "Email hoặc mật khẩu không đúng" nên không hiểu vì sao gõ đúng vẫn không vào được — nay hiện đúng lý do và thời gian mở khoá
@@ -14,6 +17,7 @@
 - **Chứng chỉ hết hạn không tự cấp lại**: chứng chỉ để quá hạn lâu thì lệnh gia hạn bị Let's Encrypt từ chối vì bản cũ đã bị xoá khỏi hệ thống, mà luồng khởi động lại chỉ biết gia hạn nên kẹt vĩnh viễn — nay tự chuyển sang cấp mới khi gia hạn hỏng
 
 ### Tài liệu
+- **Cấu hình AI**: bổ sung bảng ý nghĩa từng thông báo của nút Kiểm tra API Key, và mục xử lý khi khoá mã hoá bị đổi
 - **Hướng dẫn MCP** (#49): tách rõ hai trường hợp file cấu hình Claude Desktop rỗng và đã có sẵn nội dung — trước đây chỉ đưa một khối JSON hoàn chỉnh nên nhiều người dán thêm vào file có sẵn, thành hai khối JSON nối nhau và Claude Desktop báo lỗi không đọc được
 - **Quên mật khẩu admin**: viết lại mục trong FAQ — hướng dẫn cũ dùng `-u root -p$MYSQL_ROOT_PASSWORD` trong khi biến này không tồn tại ở shell của host nên chạy sẽ tắc, lại thiếu hẳn bước sinh mã hoá mật khẩu và gợi ý "thêm admin mới qua API" vốn không thực hiện được khi chưa đăng nhập được. Bổ sung cách xử lý khi bị khoá do đăng nhập sai 5 lần
 - **Tài liệu cài đặt**: thêm mục Lệnh quản trị liệt kê các lệnh chạy trực tiếp trên server
