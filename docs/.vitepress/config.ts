@@ -40,6 +40,7 @@ export default defineConfig({
           { text: 'Xem kết quả', link: '/usage/results' },
           { text: 'Thông báo', link: '/usage/notifications' },
           { text: 'Dashboard', link: '/usage/dashboard' },
+          { text: 'Nhật ký hệ thống', link: '/usage/activity-logs' },
           { text: 'Chi phí AI', link: '/usage/cost-logs' },
         ],
       },

@@ -62,13 +62,16 @@ const perPage = 20
 const filterAction = ref('')
 const totalPages = computed(() => Math.ceil(total.value / perPage))
 
+// Chỉ liệt kê hành động thực sự được ghi. Ba lựa chọn cũ (job.create, ai.error,
+// settings) không có chỗ nào ghi nên lọc ra luôn rỗng.
 const actionOptions = [
   { title: 'Job Run', value: 'job.run' },
-  { title: 'Job Create', value: 'job.create' },
   { title: 'Job Delete', value: 'job.delete' },
-  { title: 'AI Error', value: 'ai.error' },
+  { title: 'Job Clear Data', value: 'job.clear' },
+  { title: 'Channel', value: 'channel' },
+  { title: 'Sync', value: 'sync' },
   { title: 'Notification', value: 'notification' },
-  { title: 'Settings', value: 'settings' },
+  { title: 'Login', value: 'user.login' },
 ]
 
 onMounted(() => loadLogs())
