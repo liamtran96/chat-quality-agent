@@ -19,6 +19,11 @@ const router = createRouter({
       component: () => import('../wireframes/StorageSettings.vue'),
     },
     {
+      path: '/wireframes/results',
+      name: 'wf-results',
+      component: () => import('../wireframes/Results.vue'),
+    },
+    {
       path: '/setup',
       name: 'setup',
       component: () => import('../views/Setup.vue'),
@@ -86,6 +91,12 @@ const router = createRouter({
           name: 'job-edit',
           component: () => import('../views/Jobs/JobEdit.vue'),
           meta: { perm: 'jobs', permAction: 'w' },
+        },
+        {
+          path: 'results',
+          name: 'results',
+          component: () => import('../views/Results.vue'),
+          meta: { perm: 'jobs' },
         },
         {
           path: 'activity-logs',
