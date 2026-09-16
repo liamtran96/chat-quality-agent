@@ -204,6 +204,11 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			tenant.DELETE("/jobs/:jobId/results", middleware.RequirePermission("jobs", "d"), handlers.ClearJobResults)
 			tenant.DELETE("/jobs/:jobId/runs", middleware.RequirePermission("jobs", "d"), handlers.ClearJobRuns)
 
+			// Kết quả toàn công ty — lọc và phân trang chạy dưới database
+			tenant.GET("/results", middleware.RequirePermission("jobs", "r"), handlers.ListResults)
+			tenant.GET("/results/facets", middleware.RequirePermission("jobs", "r"), handlers.ResultsFacets)
+			tenant.GET("/results/export", middleware.RequirePermission("jobs", "r"), handlers.ExportResults)
+
 			// Settings
 			tenant.GET("/settings", middleware.RequirePermission("settings", "r"), handlers.GetSettings)
 			tenant.PUT("/settings", middleware.RequirePermission("settings", "w"), handlers.SaveSetting)

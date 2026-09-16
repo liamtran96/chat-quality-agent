@@ -46,6 +46,14 @@ Danh sách đầy đủ các biến môi trường trong file `.env`.
 Muốn cất file lên S3 thì cấu hình trong giao diện, **Cài đặt > Lưu trữ file**, riêng cho từng
 công ty — không có biến môi trường S3 nào. Xem [Lưu file đính kèm lên S3](/guide/s3-storage).
 
+## Xuất file kết quả (tùy chọn)
+
+| Biến | Mô tả | Mặc định |
+|------|-------|----------|
+| `EXPORT_MAX_ROWS` | Trần số dòng cho mỗi lần xuất CSV/Excel ở [trang Kết quả](/usage/results) | `20000` |
+
+Vượt trần, hệ thống báo để thu hẹp bộ lọc thay vì dựng một file quá lớn trong bộ nhớ máy chủ.
+
 ## Nhật ký hệ thống (tùy chọn)
 
 | Biến | Mô tả | Mặc định |

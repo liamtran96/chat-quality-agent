@@ -79,6 +79,20 @@ Tất cả endpoint dưới đây nằm trong scope tenant: `/api/v1/tenants/:te
 | POST | `/jobs/:id/test-run` | Chạy thử |
 | GET | `/jobs/:id/results` | Kết quả đánh giá |
 
+### Kết quả (mọi công việc)
+| Method | Path | Mô tả |
+|--------|------|-------|
+| GET | `/results` | Một trang kết quả của cả công ty, kèm số đếm theo từng nhãn |
+| GET | `/results/facets` | Dữ liệu dựng bộ lọc: loại công việc đang có, danh sách công việc, kênh, nhãn |
+| GET | `/results/export` | Xuất CSV hoặc Excel theo đúng bộ lọc |
+
+Tham số lọc dùng chung cho cả ba: `job_type` (`qc_analysis` mặc định hoặc `classification`),
+`job_ids`, `channel_ids`, `tags` (ngăn nhau bằng dấu phẩy), `verdict` (`all`, `pass`, `fail`,
+`skip`, `classified`), `date_field` (`conv` là ngày hội thoại, `eval` là ngày đánh giá), `from`,
+`to` (`YYYY-MM-DD`), `q` (tên khách), `score_min`, `score_max`, `sort` (`recent`, `score_asc`,
+`score_desc`), `page`, `page_size` (tối đa 100). Riêng export nhận thêm `format` (`csv` hoặc
+`xlsx`) và trả HTTP 400 với `error: export_too_large` khi vượt trần dòng.
+
 ### Dashboard
 | Method | Path | Mô tả |
 |--------|------|-------|

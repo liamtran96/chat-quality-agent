@@ -9,6 +9,9 @@ import (
 	"github.com/vietbui/chat-quality-agent/storage"
 )
 
+// DefaultExportMaxRows là trần mặc định cho mỗi lần xuất file kết quả.
+const DefaultExportMaxRows = 20000
+
 type Config struct {
 	// Server
 	ServerPort string
@@ -41,6 +44,9 @@ type Config struct {
 	// ActivityLogRetentionDays: số ngày giữ nhật ký hệ thống, 0 là giữ mãi.
 	ActivityLogRetentionDays int
 
+	// ExportMaxRows: trần số dòng cho một lần xuất CSV/Excel ở trang Kết quả.
+	ExportMaxRows int
+
 	PricingSyncEnabled  bool
 	PricingSyncURL      string
 	PricingSyncInterval time.Duration
@@ -67,6 +73,8 @@ func Load() (*Config, error) {
 		StorageLocalDir: getEnv("STORAGE_LOCAL_DIR", storage.DefaultBaseDir),
 
 		ActivityLogRetentionDays: getEnvInt("ACTIVITY_LOG_RETENTION_DAYS", 90),
+
+		ExportMaxRows: getEnvInt("EXPORT_MAX_ROWS", DefaultExportMaxRows),
 
 		PricingSyncEnabled: getEnv("PRICING_SYNC_ENABLED", "true") == "true",
 		PricingSyncURL: getEnv("PRICING_SYNC_URL",
