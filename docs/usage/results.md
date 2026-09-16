@@ -35,7 +35,14 @@ Một cuộc chat chạy lại nhiều lần chỉ hiện kết quả của lầ
 
 ### Xem chi tiết
 
-Bấm vào một dòng để mở hộp chi tiết: nhận xét chung, điểm, danh sách vấn đề (hoặc nhãn), kèm nút mở công việc đã sinh ra kết quả đó.
+Hai chế độ hiển thị, chuyển bằng cặp nút ở góc phải (chế độ đang chọn được nhớ cho lần sau):
+
+- **Danh sách** — bấm vào một thẻ để xả nội dung ngay tại chỗ: bên trái là diễn biến cuộc chat (kèm ảnh, file đính kèm), bên phải là nhận xét và danh sách vấn đề hoặc nhãn.
+- **Bảng** — bấm vào một dòng để mở hộp chi tiết, vì dòng bảng quá hẹp để xả nội dung.
+
+Cả hai đều có nút mở công việc đã sinh ra kết quả và mở cuộc chat bên trang Tin nhắn.
+
+Tài khoản không có quyền xem tin nhắn vẫn xem được phần đánh giá, chỉ phần diễn biến cuộc chat bị ẩn.
 
 ### Trên điện thoại
 

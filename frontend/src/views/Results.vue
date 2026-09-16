@@ -280,23 +280,120 @@
         </v-table>
       </v-card>
 
-      <!-- Thẻ -->
+      <!-- Thẻ: bấm để xả nội dung ngay tại chỗ, không mở hộp thoại -->
       <div v-else>
-        <v-card v-for="r in items" :key="r.id" class="mb-3 pa-4" style="cursor: pointer" @click="moChiTiet(r)">
-          <div class="d-flex align-center ga-2">
-            <span class="font-weight-medium text-truncate">{{ r.customer_name || '—' }}</span>
-            <v-spacer />
-            <v-icon size="small" color="grey">mdi-chevron-right</v-icon>
+        <v-card v-for="r in items" :key="r.id" variant="outlined" class="mb-3">
+          <div class="d-flex align-center flex-wrap ga-2 pa-3" style="cursor: pointer" @click="doiMoRong(r)">
+            <v-chip v-if="!laPhanLoai" size="small" :color="mauKetQua(r.severity)" variant="tonal">{{ nhanKetQua(r.severity) }}</v-chip>
+            <v-chip v-else-if="r.severity === 'SKIP'" size="small" color="grey" variant="tonal">{{ $t('verdict_skip') }}</v-chip>
+            <v-chip v-else size="small" color="success" variant="tonal">{{ $t('results_classified') }}</v-chip>
+
+            <div class="flex-grow-1" style="min-width: 200px">
+              <div class="d-flex align-center flex-wrap ga-2">
+                <span class="font-weight-medium text-body-2">{{ r.customer_name || '—' }}</span>
+                <span class="text-caption text-grey">{{ hienNgayGio(r.conversation_at) }}</span>
+              </div>
+              <div v-if="laPhanLoai && r.tags.length" class="d-flex flex-wrap ga-1 mt-1">
+                <v-chip v-for="t in r.tags" :key="t" size="x-small" color="secondary" variant="tonal">{{ t }}</v-chip>
+              </div>
+              <div v-if="r.review" class="text-caption text-grey-darken-1 mt-1 cat-dong">{{ r.review }}</div>
+              <div class="text-caption text-grey mt-1">{{ r.job_name }} · {{ r.channel_name }}</div>
+            </div>
+
+            <v-chip v-if="!laPhanLoai && r.severity !== 'SKIP' && r.score !== null" size="x-small" :color="mauDiem(r.score)" variant="tonal">
+              {{ r.score }}/100
+            </v-chip>
+            <span v-if="!laPhanLoai" class="text-caption text-grey">{{ r.issues.length }} {{ $t('issues_label') }}</span>
+            <v-icon>{{ moRong[r.id] ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
           </div>
-          <div class="d-flex align-center flex-wrap ga-2 mt-2 mb-2">
-            <v-chip v-if="!laPhanLoai" size="x-small" :color="mauKetQua(r.severity)" variant="tonal">{{ nhanKetQua(r.severity) }}</v-chip>
-            <v-chip v-if="!laPhanLoai && r.severity !== 'SKIP' && r.score !== null" size="x-small" variant="tonal">{{ r.score }}/100</v-chip>
-            <span class="text-caption text-grey">{{ hienNgayGio(r.conversation_at) }}</span>
+
+          <div v-if="moRong[r.id]" class="px-3 pb-3">
+            <v-divider class="mb-3" />
+            <v-row>
+              <!-- Trái: diễn biến cuộc chat -->
+              <v-col cols="12" md="7">
+                <div class="d-flex align-center mb-2">
+                  <div class="text-caption text-grey font-weight-bold">
+                    <v-icon size="x-small" class="mr-1">mdi-chat</v-icon>
+                    {{ $t('results_transcript') }}
+                  </div>
+                  <v-btn
+                    :to="`/${tenantId}/messages?conv=${r.conversation_id}`"
+                    variant="text"
+                    size="x-small"
+                    color="primary"
+                    class="ml-2 pa-0"
+                    style="min-width: 0; height: auto"
+                  >
+                    <v-icon size="x-small" class="mr-1">mdi-open-in-new</v-icon>{{ $t('results_open_messages') }}
+                  </v-btn>
+                </div>
+
+                <div v-if="chat.khongCoQuyen.value" class="text-body-2 text-grey pa-3">
+                  {{ $t('results_transcript_denied') }}
+                </div>
+                <div v-else-if="!chat.messages.value[r.conversation_id]" class="text-center pa-4">
+                  <v-progress-circular indeterminate size="24" />
+                </div>
+                <div v-else-if="!chat.messages.value[r.conversation_id].length" class="text-body-2 text-grey pa-3">
+                  {{ $t('results_transcript_empty') }}
+                </div>
+                <div v-else class="pa-2 rounded khung-chat">
+                  <div v-for="msg in chat.messages.value[r.conversation_id]" :key="msg.id" class="mb-2">
+                    <div class="pa-2 rounded bong-chat" :class="msg.sender_type === 'agent' ? 'bg-blue-lighten-5 ml-8' : 'bg-surface mr-8'">
+                      <div class="d-flex align-center mb-1">
+                        <span class="text-caption font-weight-bold" :class="msg.sender_type === 'agent' ? 'text-blue' : 'text-grey-darken-2'">
+                          {{ msg.sender_name }}
+                        </span>
+                        <v-spacer />
+                        <span class="text-caption text-grey">{{ hienNgayGio(msg.sent_at) }}</span>
+                      </div>
+                      <div v-if="msg.content" class="text-body-2" style="font-size: 13px">{{ msg.content }}</div>
+                      <div v-if="msg.content_type === 'sticker'" class="text-caption font-italic">[Sticker]</div>
+                      <div v-if="chat.hasAttachments(msg)" class="mt-1">
+                        <template v-for="(att, ai) in chat.parseAttachments(msg)" :key="ai">
+                          <div v-if="chat.isImageAttachment(att)" class="mb-1">
+                            <img
+                              v-if="anhSanSang(att)"
+                              :src="chat.anhCache.value[chat.getAttachmentUrl(att)]"
+                              class="anh-dinh-kem"
+                              @click="anhPhongTo = chat.anhCache.value[chat.getAttachmentUrl(att)]"
+                            />
+                            <v-progress-circular v-else indeterminate size="20" width="2" class="ma-2" />
+                          </div>
+                          <v-chip v-else size="x-small" variant="tonal" class="mr-1" :href="chat.getAttachmentUrl(att)" target="_blank">
+                            <v-icon start size="12">mdi-paperclip</v-icon>{{ att.name || 'File' }}
+                          </v-chip>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </v-col>
+
+              <!-- Phải: đánh giá chi tiết -->
+              <v-col cols="12" md="5">
+                <div class="text-caption text-grey font-weight-bold mb-2">
+                  <v-icon size="x-small" class="mr-1">mdi-alert-circle</v-icon>
+                  {{ $t('results_detail') }}
+                </div>
+                <v-alert v-if="r.review" :type="r.severity === 'PASS' ? 'success' : 'warning'" variant="tonal" density="compact" class="mb-3 text-body-2">
+                  {{ r.review }}
+                </v-alert>
+                <div v-for="(i, idx) in r.issues" :key="idx" class="mb-3">
+                  <div class="font-weight-medium text-body-2 mb-1">{{ i.rule_name }}</div>
+                  <div v-if="i.evidence" class="text-body-2 pa-2 rounded o-bang-chung">{{ i.evidence }}</div>
+                </div>
+                <div v-if="!r.issues.length && r.severity === 'PASS' && !laPhanLoai" class="text-center text-grey pa-4">
+                  <v-icon size="32" color="success">mdi-check-circle</v-icon>
+                  <div class="text-body-2 mt-2">{{ $t('no_issues') }}</div>
+                </div>
+                <v-btn variant="text" size="small" color="primary" class="mt-2 pa-0" style="min-width: 0" :to="`/${tenantId}/jobs/${r.job_id}`">
+                  {{ $t('results_open_job') }}
+                </v-btn>
+              </v-col>
+            </v-row>
           </div>
-          <div class="text-body-2 text-grey-darken-2 mb-2 cat-dong-3">
-            {{ laPhanLoai ? (r.tags.length ? r.tags.join('; ') : '—') : tomTatVanDe(r) }}
-          </div>
-          <div class="text-caption text-grey">{{ r.job_name }} · {{ r.channel_name }}</div>
         </v-card>
       </div>
 
@@ -446,6 +543,10 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog :model-value="!!anhPhongTo" max-width="900" @update:model-value="anhPhongTo = ''">
+      <v-img :src="anhPhongTo" contain style="background: rgba(0, 0, 0, 0.9)" @click="anhPhongTo = ''" />
+    </v-dialog>
+
     <v-snackbar v-model="baoLoi" color="error" timeout="6000">{{ noiDungLoi }}</v-snackbar>
   </div>
 </template>
@@ -456,6 +557,7 @@ import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useI18n } from 'vue-i18n'
 import api from '../api'
+import { useChatTranscript } from '../composables/useChatTranscript'
 
 interface IssueItem {
   rule_name: string
@@ -516,7 +618,11 @@ const denNgay = ref('')
 const sort = ref('recent')
 const page = ref(1)
 const pageSize = 25
-const cheDoXem = ref<'card' | 'table'>('table')
+// Nhớ kiểu xem đã chọn để lần sau vào khỏi phải bấm lại
+const KHOA_KIEU_XEM = 'cqa_results_view'
+const cheDoXem = ref<'card' | 'table'>(
+  (localStorage.getItem(KHOA_KIEU_XEM) as 'card' | 'table') || 'table'
+)
 const moLocMobile = ref(false)
 
 const items = ref<ResultItem[]>([])
@@ -525,6 +631,11 @@ const counts = ref({ all: 0, pass: 0, fail: 0, skip: 0, classified: 0 })
 
 const chiTiet = ref<ResultItem | null>(null)
 const moChiTietDialog = ref(false)
+
+// Thẻ xả nội dung ngay tại chỗ; bảng thì vẫn mở hộp thoại vì dòng bảng quá hẹp
+const moRong = ref<Record<string, boolean>>({})
+const anhPhongTo = ref('')
+const chat = useChatTranscript()
 
 const presets = [
   { label: 'results_preset_all', value: 'all' },
@@ -639,6 +750,24 @@ function tomTatVanDe(r: ResultItem) {
   return r.issues.map(i => (i.evidence ? `${i.rule_name}: ${i.evidence}` : i.rule_name)).join('; ')
 }
 
+function doiMoRong(r: ResultItem) {
+  const dangMo = !moRong.value[r.id]
+  moRong.value[r.id] = dangMo
+  if (dangMo) chat.loadMessages(tenantId.value, r.conversation_id)
+}
+
+function anhSanSang(att: { url?: string; local_path?: string }) {
+  const url = chat.getAttachmentUrl(att)
+  const cache = chat.anhCache.value[url]
+  return !!cache && cache !== 'loading'
+}
+
+function mauDiem(score: number) {
+  if (score >= 80) return 'success'
+  if (score >= 50) return 'warning'
+  return 'error'
+}
+
 function moChiTiet(r: ResultItem) {
   chiTiet.value = r
   moChiTietDialog.value = true
@@ -686,6 +815,7 @@ async function taiKetQua() {
     const { data } = await api.get(`/tenants/${tenantId.value}/results`, {
       params: { ...thamSo(), page: page.value, page_size: pageSize },
     })
+    moRong.value = {}
     items.value = data.items || []
     total.value = data.total || 0
     counts.value = data.counts || { all: 0, pass: 0, fail: 0, skip: 0, classified: 0 }
@@ -751,6 +881,11 @@ watch(jobType, () => {
 watch([verdict, dateField, sort, tuNgay, denNgay], () => taiLai())
 watch([tuKhoa, jobIDs, channelIDs, tags, khoangDiem], () => taiLai(), { deep: true })
 watch(page, () => taiKetQua())
+watch(cheDoXem, (v) => {
+  try {
+    localStorage.setItem(KHOA_KIEU_XEM, v)
+  } catch { /* trình duyệt chặn lưu thì bỏ qua, không ảnh hưởng gì */ }
+})
 
 onMounted(async () => {
   await taiFacets()
@@ -795,6 +930,25 @@ onMounted(async () => {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.khung-chat {
+  background: rgba(var(--v-theme-on-surface), 0.04);
+  max-height: 500px;
+  overflow-y: auto;
+}
+.bong-chat {
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+.anh-dinh-kem {
+  max-width: 180px;
+  max-height: 180px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.o-bang-chung {
+  font-size: 13px;
+  background: rgba(var(--v-theme-warning), 0.08);
+  border-left: 3px solid rgb(var(--v-theme-warning));
 }
 /* Hàng nào có vấn đề dài thì cần cao hơn mức mặc định của bảng compact */
 :deep(.v-table td) {

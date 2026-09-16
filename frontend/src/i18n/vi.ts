@@ -360,4 +360,9 @@ export default {
   to_date: 'Đến ngày',
   reset: 'Đặt lại',
   close: 'Đóng',
+  results_transcript: 'Diễn biến cuộc chat',
+  results_transcript_empty: 'Cuộc chat không còn tin nhắn nào.',
+  results_transcript_denied: 'Bạn không có quyền xem tin nhắn nên phần hội thoại được ẩn.',
+  results_open_messages: 'Xem tại Tin nhắn',
+  results_detail: 'Đánh giá chi tiết',
 }

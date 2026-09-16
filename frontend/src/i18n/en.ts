@@ -360,4 +360,9 @@ export default {
   to_date: 'To',
   reset: 'Reset',
   close: 'Close',
+  results_transcript: 'Chat transcript',
+  results_transcript_empty: 'This conversation has no messages left.',
+  results_transcript_denied: 'You do not have permission to view messages, so the transcript is hidden.',
+  results_open_messages: 'Open in Messages',
+  results_detail: 'Evaluation detail',
 }
