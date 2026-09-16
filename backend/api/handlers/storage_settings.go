@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -175,6 +176,51 @@ func SaveStorageSettings(c *gin.Context) {
 
 // GetStorageStatus cho giao diện biết công ty đang lưu file ở đâu và đã lưu
 // Secret Key hay chưa.
+// Đếm file trên đĩa phải duyệt cả thư mục, nên giữ kết quả một lúc: trang Cài
+// đặt hay được mở lại và con số này không đổi theo từng giây.
+const storageUsageTTL = 60 * time.Second
+
+// Hạn cho một lần đếm. Kho lớn thì trả phần đếm được kèm dấu hiệu dở dang, còn
+// hơn để người dùng ngồi chờ.
+const storageUsageTimeout = 5 * time.Second
+
+type usageCacheEntry struct {
+	usage storage.Usage
+	at    time.Time
+}
+
+var (
+	usageCacheMu sync.Mutex
+	usageCache   = map[string]usageCacheEntry{}
+)
+
+// localUsageCached đếm dung lượng trên đĩa, dùng lại kết quả cũ nếu còn hạn.
+func localUsageCached(ctx context.Context, baseDir, tenantID string) storage.Usage {
+	usageCacheMu.Lock()
+	if e, ok := usageCache[tenantID]; ok && time.Since(e.at) < storageUsageTTL {
+		usageCacheMu.Unlock()
+		return e.usage
+	}
+	usageCacheMu.Unlock()
+
+	ctx, cancel := context.WithTimeout(ctx, storageUsageTimeout)
+	defer cancel()
+
+	u, err := storage.LocalUsage(ctx, baseDir, tenantID)
+	if err != nil {
+		log.Printf("[storage] không đếm được file trên đĩa: tenant=%s", tenantID)
+		return storage.Usage{}
+	}
+
+	// Số liệu dở dang không đáng để giữ lại, lần sau đếm lại từ đầu.
+	if !u.Partial {
+		usageCacheMu.Lock()
+		usageCache[tenantID] = usageCacheEntry{usage: u, at: time.Now()}
+		usageCacheMu.Unlock()
+	}
+	return u
+}
+
 func GetStorageStatus(c *gin.Context) {
 	tenantID := middleware.GetTenantID(c)
 
@@ -193,8 +239,21 @@ func GetStorageStatus(c *gin.Context) {
 	if backend == "" {
 		backend = "local"
 	}
+	cfg, err := config.Load()
+	if err != nil {
+		log.Printf("[storage] không đọc được cấu hình: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "config_error"})
+		return
+	}
+	// Số file đang nằm trên đĩa máy chủ. Vẫn hiển thị khi đã bật S3, vì đó chính
+	// là phần ảnh cũ chưa chuyển đi.
+	dungTrenDia := localUsageCached(c.Request.Context(), cfg.StorageLocalDir, tenantID)
+
 	c.JSON(http.StatusOK, gin.H{
 		"backend":           backend,
+		"local_bytes":       dungTrenDia.Bytes,
+		"local_files":       dungTrenDia.Files,
+		"local_partial":     dungTrenDia.Partial,
 		"endpoint":          get(storagecfg.KeyEndpoint),
 		"bucket":            get(storagecfg.KeyBucket),
 		"region":            get(storagecfg.KeyRegion),

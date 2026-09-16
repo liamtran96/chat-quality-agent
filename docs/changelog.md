@@ -1,5 +1,10 @@
 # Changelog
 
+## v2026.09.16
+
+### Tính năng mới
+- **Dung lượng file trên máy chủ**: Cài đặt > Lưu trữ file nay cho biết công ty đang chiếm bao nhiêu dung lượng đĩa và bao nhiêu file, vẫn hiện sau khi bật S3 để biết còn bao nhiêu file cũ chưa chuyển đi
+
 ## v2026.09.15
 
 ### Tính năng mới

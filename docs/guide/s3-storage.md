@@ -9,6 +9,18 @@ không ảnh hưởng nhau — mỗi bên một bucket của riêng mình.
 Dùng được với mọi dịch vụ tương thích S3: AWS S3, Cloudflare R2, DigitalOcean Spaces, MinIO tự
 dựng, hay dịch vụ object storage trong nước. Không phải khai báo gì thêm cho từng nhà cung cấp.
 
+## Xem đang dùng bao nhiêu
+
+Ngay ở đầu **Cài đặt > Lưu trữ file** có dòng cho biết công ty đang chiếm bao nhiêu dung lượng
+đĩa máy chủ và bao nhiêu file — căn cứ để quyết định có cần chuyển sang S3 hay chưa.
+
+Con số này đếm riêng cho từng công ty, và vẫn hiển thị sau khi đã bật S3, vì đó chính là phần
+file cũ còn nằm lại trên máy chủ. Kết quả được giữ lại một phút nên mở đi mở lại không phải
+đếm liên tục.
+
+Kho quá lớn khiến việc đếm chưa xong trong thời gian cho phép thì con số kèm ghi chú
+*(chưa đếm hết)* — phần đếm được vẫn hiện, không giấu đi.
+
 ## Cấu hình
 
 Vào **Cài đặt > Lưu trữ file**, bật **Dùng S3 cho công ty này**, rồi điền:

@@ -147,7 +147,9 @@
             <span v-if="storage.backend === 's3'">
               {{ $t('storage_now_s3') }} <strong>{{ storage.bucket }}</strong> · {{ storageHost }}
             </span>
-            <span v-else>{{ $t('storage_now_local') }}</span>
+            <span v-else>
+              {{ $t('storage_now_local') }}<template v-if="storageLocalUsage"> — {{ storageLocalUsage }}</template>
+            </span>
           </v-alert>
 
           <v-switch
@@ -263,7 +265,10 @@
 
               <v-divider class="my-6" />
               <div class="text-body-2 font-weight-medium mb-1">{{ $t('storage_old_files_title') }}</div>
-              <div class="text-body-2 text-grey mb-3">{{ $t('storage_old_files_desc') }}</div>
+              <div class="text-body-2 text-grey mb-3">
+                {{ $t('storage_old_files_desc') }}
+                <template v-if="storageUsageParts"> {{ $t('storage_old_files_now', storageUsageParts) }}</template>
+              </div>
               <v-btn
                 variant="text"
                 color="primary"
@@ -378,6 +383,9 @@ const testingStorage = ref(false)
 // Nơi cất file đính kèm, cấu hình riêng cho từng công ty.
 const storage = reactive({
   backend: 'local',
+  local_bytes: 0,
+  local_files: 0,
+  local_partial: false,
   endpoint: '',
   bucket: '',
   region: '',
@@ -628,6 +636,39 @@ async function testKey() {
     testingKey.value = false
   }
 }
+
+// Đổi số byte thành chuỗi người đọc được. Dùng bội số 1024 cho khớp với cách hệ
+// điều hành báo dung lượng ổ đĩa.
+function dinhDangDungLuong(bytes: number): string {
+  if (!bytes || bytes < 0) return '0 MB'
+  const don = ['B', 'KB', 'MB', 'GB', 'TB']
+  let i = 0
+  let v = bytes
+  while (v >= 1024 && i < don.length - 1) {
+    v /= 1024
+    i++
+  }
+  // Dưới 10 thì giữ một chữ số thập phân cho đỡ mất thông tin (1,4 GB).
+  const soChu = v < 10 && i > 0 ? 1 : 0
+  return `${v.toFixed(soChu).replace('.', ',')} ${don[i]}`
+}
+
+// Hai cách diễn đạt cùng một con số: câu đầy đủ cho dòng trạng thái, và cụm
+// ngắn để nhét vào giữa câu khác mà không lặp chữ.
+const storageUsageParts = computed(() => {
+  if (!storage.local_files) return null
+  return {
+    size: dinhDangDungLuong(storage.local_bytes),
+    count: storage.local_files.toLocaleString('vi-VN'),
+  }
+})
+
+const storageLocalUsage = computed(() => {
+  const p = storageUsageParts.value
+  if (!p) return ''
+  const text = t('storage_local_usage', p)
+  return storage.local_partial ? `${text} ${t('storage_usage_partial')}` : text
+})
 
 async function loadStorage() {
   try {
