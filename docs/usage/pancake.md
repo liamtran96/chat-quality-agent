@@ -30,7 +30,13 @@ Page Access Token **không hết hạn**. Token chỉ mất hiệu lực khi adm
 4. Chọn chu kỳ đồng bộ. Nên bật **Lưu trữ file/ảnh từ cuộc chat** (xem lý do bên dưới).
 5. Bấm **Tạo**.
 
+![Kết nối kênh Pancake](/screenshots/pancake/pancake-ket-noi-kenh.png)
+
 CQA thử gọi Pancake ngay khi tạo kênh. Nếu Page ID hoặc token sai, CQA báo lỗi và không tạo kênh.
+
+Tạo xong, kênh hiện trong danh sách **Kênh chat** với nhãn **Pancake**. Bấm **Đồng bộ ngay** để lấy tin nhắn lần đầu.
+
+![Kênh Pancake trong danh sách kênh chat](/screenshots/pancake/pancake-danh-sach-kenh.png)
 
 ## Dữ liệu được đồng bộ
 
