@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Chat Quality Agent
   text: Phân tích chất lượng CSKH bằng AI
-  tagline: Tự động đồng bộ tin nhắn từ Zalo OA, Facebook Messenger. Dùng AI (Claude/Gemini) đánh giá chất lượng CSKH và phân loại cuộc chat.
+  tagline: Tự động đồng bộ tin nhắn từ Zalo OA, Facebook Messenger, Pancake. Dùng AI (Claude/Gemini) đánh giá chất lượng CSKH và phân loại cuộc chat.
   image:
     src: /screenshots/dashboard.png
     alt: CQA Dashboard
@@ -22,7 +22,7 @@ hero:
 features:
   - icon: 🔄
     title: Đồng bộ tin nhắn
-    details: Tự động lấy tin nhắn từ Zalo OA và Facebook Messenger. Hỗ trợ đồng bộ theo lịch.
+    details: Tự động lấy tin nhắn từ Zalo OA, Facebook Messenger và Pancake. Hỗ trợ đồng bộ theo lịch.
   - icon: ✅
     title: Đánh giá chất lượng CSKH
     details: AI chấm điểm 0-100, phân loại Đạt/Không đạt, chỉ ra từng vi phạm cụ thể với bằng chứng.

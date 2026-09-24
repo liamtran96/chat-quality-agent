@@ -87,7 +87,7 @@
               />
               <v-select
                 v-model="exportChannelType"
-                :items="[{ title: 'Tất cả kênh', value: '' }, { title: 'Zalo OA', value: 'zalo_oa' }, { title: 'Facebook', value: 'facebook' }]"
+                :items="[{ title: 'Tất cả kênh', value: '' }, ...CHANNEL_TYPES.map(c => ({ title: c.label, value: c.value }))]"
                 label="Kênh"
                 density="compact"
                 variant="outlined"
@@ -116,9 +116,9 @@
                 @click="selectConversation(conv.id)"
               >
                 <template #prepend>
-                  <v-avatar :color="conv.channel_type === 'facebook' ? 'blue' : 'green'" size="32" class="mr-3">
+                  <v-avatar :color="channelTypeInfo(conv.channel_type).color" size="32" class="mr-3">
                     <v-icon color="white" size="16">
-                      {{ conv.channel_type === 'facebook' ? 'mdi-facebook-messenger' : 'mdi-chat' }}
+                      {{ channelTypeInfo(conv.channel_type).icon }}
                     </v-icon>
                   </v-avatar>
                 </template>
@@ -127,8 +127,8 @@
                   {{ conv.customer_name || $t('msg_unknown_customer') }}
                 </v-list-item-title>
                 <v-list-item-subtitle class="text-caption">
-                  <v-chip size="x-small" :color="conv.channel_type === 'facebook' ? 'blue' : 'green'" variant="tonal" class="mr-1">
-                    {{ conv.channel_type === 'facebook' ? 'FB' : 'Zalo' }}
+                  <v-chip size="x-small" :color="channelTypeInfo(conv.channel_type).color" variant="tonal" class="mr-1">
+                    {{ channelTypeInfo(conv.channel_type).short }}
                   </v-chip>
                   <v-chip v-if="evaluationMap[conv.id]" size="x-small" :color="evaluationMap[conv.id] === 'PASS' ? 'success' : 'error'" variant="tonal" class="mr-1">
                     {{ evaluationMap[conv.id] === 'PASS' ? 'Đạt' : 'Không đạt' }}
@@ -164,9 +164,9 @@
           <!-- Header -->
           <v-card-title class="d-flex align-center pa-4">
             <v-btn icon="mdi-arrow-left" variant="text" size="small" class="d-md-none mr-2" @click="selectedConvId = null" />
-            <v-avatar :color="selectedConvChannelType === 'facebook' ? 'blue' : 'green'" size="36" class="mr-3">
+            <v-avatar :color="channelTypeInfo(selectedConvChannelType).color" size="36" class="mr-3">
               <v-icon color="white" size="18">
-                {{ selectedConvChannelType === 'facebook' ? 'mdi-facebook-messenger' : 'mdi-chat' }}
+                {{ channelTypeInfo(selectedConvChannelType).icon }}
               </v-icon>
             </v-avatar>
             <div class="flex-grow-1">
@@ -343,6 +343,7 @@
 </template>
 
 <script setup lang="ts">
+import { channelTypeInfo, CHANNEL_TYPES } from '../composables/channelTypes'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
@@ -531,10 +532,7 @@ const messagesContainer = ref<HTMLElement | null>(null)
 
 const perPage = 9
 
-const channelTypes = [
-  { title: 'Facebook Fanpage', value: 'facebook' },
-  { title: 'Zalo OA', value: 'zalo_oa' },
-]
+const channelTypes = CHANNEL_TYPES.map(c => ({ title: c.label, value: c.value }))
 
 const channelOptions = computed(() => {
   let filtered = channelStore.channels

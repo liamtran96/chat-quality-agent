@@ -3,7 +3,7 @@
 [![Docker Hub](https://img.shields.io/docker/v/buitanviet/chat-quality-agent?label=Docker%20Hub&sort=semver)](https://hub.docker.com/r/buitanviet/chat-quality-agent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Hệ thống phân tích chất lượng chăm sóc khách hàng bằng AI. Tự động đồng bộ tin nhắn từ Zalo OA, Facebook Messenger, dùng AI (Claude/Gemini) đánh giá chất lượng CSKH và gửi cảnh báo qua Telegram/Email.
+Hệ thống phân tích chất lượng chăm sóc khách hàng bằng AI. Tự động đồng bộ tin nhắn từ Zalo OA, Facebook Messenger, Pancake, dùng AI (Claude/Gemini) đánh giá chất lượng CSKH và gửi cảnh báo qua Telegram/Email.
 
 📖 **Hướng dẫn sử dụng chi tiết: [https://tanviet12.github.io/chat-quality-agent/](https://tanviet12.github.io/chat-quality-agent/)**
 
@@ -11,7 +11,7 @@ Hệ thống phân tích chất lượng chăm sóc khách hàng bằng AI. Tự
 
 ## Tính năng
 
-- **Đồng bộ tin nhắn** từ Zalo OA và Facebook Messenger
+- **Đồng bộ tin nhắn** từ Zalo OA, Facebook Messenger và Pancake
 - **Đánh giá chất lượng CSKH** bằng AI (Claude hoặc Gemini) — Đạt/Không đạt, điểm 0-100, nhận xét chi tiết
 - **Phân loại chat** theo chủ đề tùy chỉnh (khiếu nại, góp ý, hỏi giá...)
 - **Cảnh báo tự động** qua Telegram và Email

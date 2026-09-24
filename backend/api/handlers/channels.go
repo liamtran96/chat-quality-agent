@@ -19,6 +19,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/vietbui/chat-quality-agent/api/middleware"
+	"github.com/vietbui/chat-quality-agent/channels"
 	"github.com/vietbui/chat-quality-agent/config"
 	"github.com/vietbui/chat-quality-agent/db"
 	"github.com/vietbui/chat-quality-agent/db/models"
@@ -30,7 +31,7 @@ import (
 var httpClientWithTimeout = &http.Client{Timeout: 30 * time.Second}
 
 type CreateChannelRequest struct {
-	ChannelType string          `json:"channel_type" binding:"required,oneof=zalo_oa facebook"`
+	ChannelType string          `json:"channel_type" binding:"required,oneof=zalo_oa facebook pancake"`
 	Name        string          `json:"name" binding:"required,min=2,max=255"`
 	Credentials json.RawMessage `json:"credentials" binding:"required"` // JSON: varies by type
 	Metadata    string          `json:"metadata"`
@@ -136,6 +137,22 @@ func CreateChannel(c *gin.Context) {
 				return
 			}
 		}
+	}
+
+	if req.ChannelType == "pancake" {
+		var pkCreds channels.PancakeCredentials
+		if err := json.Unmarshal(req.Credentials, &pkCreds); err != nil || pkCreds.PageID == "" || pkCreds.PageAccessToken == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "pancake_credentials_required"})
+			return
+		}
+		// Kiểm tra token ngay khi tạo kênh để người dùng biết nhập sai, thay vì
+		// chờ tới lần đồng bộ đầu tiên mới báo lỗi.
+		if err := channels.NewPancakeAdapter(pkCreds).HealthCheck(c.Request.Context()); err != nil {
+			log.Printf("[channels] pancake health check failed for page %s: %v", pkCreds.PageID, err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "pancake_connection_failed"})
+			return
+		}
+		externalID = pkCreds.PageID
 	}
 
 	now := time.Now()

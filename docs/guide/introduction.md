@@ -6,7 +6,7 @@
 
 Khi doanh nghiệp có nhiều kênh chat (Zalo OA, Facebook Messenger), việc kiểm tra chất lượng CSKH thủ công tốn nhiều thời gian và dễ bỏ sót. CQA tự động hóa quy trình này:
 
-- **Đọc hết mọi cuộc chat** — Đồng bộ tự động từ Zalo OA và Facebook Messenger
+- **Đọc hết mọi cuộc chat** — Đồng bộ tự động từ Zalo OA, Facebook Messenger và Pancake
 - **Đánh giá bằng AI** — AI đọc cuộc chat, chấm điểm 0-100, phát hiện vi phạm theo quy định CSKH của bạn
 - **Phân loại tự động** — Gán nhãn cho cuộc chat: khiếu nại, góp ý, hỏi giá, đặt bàn...
 - **Cảnh báo ngay** — Gửi thông báo qua Telegram hoặc Email khi phát hiện vấn đề
@@ -15,7 +15,7 @@ Khi doanh nghiệp có nhiều kênh chat (Zalo OA, Facebook Messenger), việc 
 
 | Tính năng | Mô tả |
 |-----------|-------|
-| Đồng bộ tin nhắn | Tự động lấy tin nhắn từ Zalo OA và Facebook Messenger |
+| Đồng bộ tin nhắn | Tự động lấy tin nhắn từ Zalo OA, Facebook Messenger và Pancake |
 | Đánh giá CSKH (QC) | AI chấm điểm, phân loại Đạt/Không đạt, chỉ ra lỗi cụ thể |
 | Phân loại chat | Phân loại theo chủ đề tùy chỉnh (khiếu nại, góp ý, hỏi giá...) |
 | Cảnh báo tự động | Gửi kết quả qua Telegram và Email theo lịch hẹn |

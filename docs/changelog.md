@@ -1,5 +1,11 @@
 # Changelog
 
+## v2026.09.24
+
+### Tính năng mới
+- **Kết nối Pancake** (#47): thêm loại kênh Pancake, đọc tin nhắn qua API công khai của Pancake nên một kênh lấy được tin của mọi nền tảng đã kết nối vào Pancake (Facebook, Instagram, Zalo OA, TikTok, Shopee…). Chỉ cần Page ID và Page Access Token, không phải làm OAuth; token được thử ngay khi tạo kênh, sai là báo liền. Tin của page hiện tên nhân viên đã trả lời thay vì tên page. Đồng bộ chữ, emoji, sticker, ảnh, video và file; video và file nằm trên máy chủ gốc với link sống khoảng hai ngày nên bật lưu trữ file để tải về ngay. Chỉ lấy hội thoại tin nhắn, bỏ qua bình luận. Số điện thoại, email, đơn hàng mà Pancake trả kèm không được lưu. CQA tự giữ nhịp dưới giới hạn 5 lượt gọi mỗi giây của Pancake. Hướng dẫn tại trang Kết nối Pancake trong tài liệu
+- **Màu và biểu tượng kênh thống nhất**: nhãn, màu, biểu tượng của từng loại kênh nay khai báo một chỗ và dùng chung cho mọi trang; trang Kênh chat và bước chọn kênh khi tạo công việc đổi sang cùng màu với trang Tin nhắn (Zalo xanh lá, Facebook xanh dương)
+
 ## v2026.09.16
 
 ### Tính năng mới

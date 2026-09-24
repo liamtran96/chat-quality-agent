@@ -80,4 +80,4 @@ Cài đặt → Tạo admin → Tạo công ty → Cấu hình chung → Cấu h
 ## Bước tiếp theo
 
 - [Cấu hình AI chi tiết](/usage/ai-settings) — So sánh Claude vs Gemini, Batch mode
-- [Kết nối kênh chat](/usage/channels) — Hướng dẫn kết nối Zalo OA, Facebook
+- [Kết nối kênh chat](/usage/channels) — Hướng dẫn kết nối Zalo OA, Facebook, Pancake

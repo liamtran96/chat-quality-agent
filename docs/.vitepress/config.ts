@@ -36,6 +36,7 @@ export default defineConfig({
           { text: 'Cấu hình AI', link: '/usage/ai-settings' },
           { text: 'Kết nối Zalo OA', link: '/usage/channels' },
           { text: 'Kết nối Facebook', link: '/usage/facebook' },
+          { text: 'Kết nối Pancake', link: '/usage/pancake' },
           { text: 'Quản lý tin nhắn', link: '/usage/messages' },
           { text: 'Tạo công việc', link: '/usage/jobs' },
           { text: 'Xem kết quả', link: '/usage/results' },

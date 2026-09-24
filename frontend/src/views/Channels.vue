@@ -11,16 +11,16 @@
       <v-col v-for="ch in channelStore.channels" :key="ch.id" cols="12" sm="6" md="4">
         <v-card class="pa-4" style="cursor: pointer" @click="router.push(`/${tenantId}/channels/${ch.id}`)">
           <div class="d-flex align-center mb-3">
-            <v-icon :color="ch.channel_type === 'zalo_oa' ? 'blue' : 'indigo'" size="32" class="mr-3">
-              {{ ch.channel_type === 'zalo_oa' ? 'mdi-message-text' : 'mdi-facebook-messenger' }}
+            <v-icon :color="channelTypeInfo(ch.channel_type).color" size="32" class="mr-3">
+              {{ channelTypeInfo(ch.channel_type).icon }}
             </v-icon>
             <div class="flex-grow-1">
               <div class="text-subtitle-1 font-weight-bold">{{ ch.name }}</div>
-              <v-chip size="x-small" :color="ch.channel_type === 'zalo_oa' ? 'blue' : 'indigo'" variant="tonal">
-                {{ ch.channel_type === 'zalo_oa' ? $t('channel_zalo') : $t('channel_facebook') }}
+              <v-chip size="x-small" :color="channelTypeInfo(ch.channel_type).color" variant="tonal">
+                {{ channelTypeInfo(ch.channel_type).label }}
               </v-chip>
-              <div v-if="ch.channel_type === 'zalo_oa' && ch.external_id" class="text-caption text-grey mt-1" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                OA: {{ ch.external_id }}
+              <div v-if="(ch.channel_type === 'zalo_oa' || ch.channel_type === 'pancake') && ch.external_id" class="text-caption text-grey mt-1" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ ch.channel_type === 'zalo_oa' ? 'OA' : 'Page' }}: {{ ch.external_id }}
               </div>
             </div>
             <div class="text-right">
@@ -51,7 +51,7 @@
             <v-btn size="small" variant="tonal" color="primary" prepend-icon="mdi-sync" :loading="syncing === ch.id" @click="syncNow(ch.id)">
               {{ $t('sync_now') }}
             </v-btn>
-            <v-btn v-if="ch.last_sync_status === 'error'" size="small" variant="tonal" color="warning" prepend-icon="mdi-link-variant" :loading="reauthing === ch.id" @click="reauthChannel(ch.id)">
+            <v-btn v-if="ch.last_sync_status === 'error' && ch.channel_type !== 'pancake'" size="small" variant="tonal" color="warning" prepend-icon="mdi-link-variant" :loading="reauthing === ch.id" @click="reauthChannel(ch.id)">
               Kết nối lại
             </v-btn>
             <v-btn size="small" variant="text" color="primary" @click="testConn(ch.id)">
@@ -69,7 +69,7 @@
       <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-chat-plus</v-icon>
       <div class="text-h6 text-grey-darken-1 mb-2">Chưa có kênh chat nào</div>
       <div class="text-body-2 text-grey mb-4" style="max-width: 500px; margin: 0 auto;">
-        Kết nối kênh chat Facebook, Zalo OA để hệ thống đồng bộ tin nhắn và AI phân tích chất lượng CSKH.
+        Kết nối kênh chat Facebook, Zalo OA hoặc Pancake để hệ thống đồng bộ tin nhắn và AI phân tích chất lượng CSKH.
       </div>
       <v-btn color="primary" prepend-icon="mdi-plus" @click="showDialog = true">Kết nối kênh</v-btn>
     </div>
@@ -81,7 +81,7 @@
         <v-select
           v-model="newChannel.channel_type"
           :label="$t('channel_type')"
-          :items="[{ title: $t('channel_zalo'), value: 'zalo_oa' }, { title: $t('channel_facebook'), value: 'facebook' }]"
+          :items="[{ title: $t('channel_zalo'), value: 'zalo_oa' }, { title: $t('channel_facebook'), value: 'facebook' }, { title: $t('channel_pancake'), value: 'pancake' }]"
           class="mb-3"
         />
         <v-text-field v-model="newChannel.name" :label="$t('channel_name')" class="mb-3" />
@@ -97,6 +97,15 @@
             <v-icon size="14" class="mr-1">mdi-information-outline</v-icon>
             Nếu ứng dụng Zalo có nhiều OA, bước tiếp theo sẽ mở trang Zalo để chọn OA — hãy chọn <b>đúng OA</b> tương ứng với kênh này.
           </div>
+        </template>
+
+        <!-- Pancake -->
+        <template v-else-if="newChannel.channel_type === 'pancake'">
+          <v-btn variant="tonal" color="info" prepend-icon="mdi-book-open-variant" href="https://tanviet12.github.io/chat-quality-agent/usage/pancake.html" target="_blank" class="mb-3">
+            Hướng dẫn kết nối Pancake
+          </v-btn>
+          <v-text-field v-model="newChannel.creds.page_id" :label="$t('pancake_page_id')" density="compact" class="mb-2" hint="ID của page trong Pancake" persistent-hint />
+          <v-text-field v-model="newChannel.creds.page_access_token" :label="$t('pancake_page_token')" type="password" density="compact" class="mb-2" hint="Pancake: Cài đặt page → Công cụ (cần quyền admin page)" persistent-hint />
         </template>
 
         <!-- Facebook -->
@@ -144,6 +153,15 @@
             {{ $t('zalo_authorize') }}
           </v-btn>
           <v-btn
+            v-else-if="newChannel.channel_type === 'pancake'"
+            color="orange"
+            :loading="creating"
+            :disabled="!newChannel.name || !newChannel.creds.page_id || !newChannel.creds.page_access_token"
+            @click="createPancake"
+          >
+            {{ $t('create') }}
+          </v-btn>
+          <v-btn
             v-else
             color="indigo"
             :loading="creating"
@@ -172,7 +190,7 @@
           persistent-hint
         />
         <v-alert v-if="editForm.sync_interval <= 5" type="warning" variant="tonal" density="compact" class="mb-3">
-          Đồng bộ quá thường xuyên có thể bị giới hạn bởi API của nền tảng (Facebook/Zalo).
+          Đồng bộ quá thường xuyên có thể bị giới hạn bởi API của nền tảng (Facebook/Zalo/Pancake).
         </v-alert>
         <v-switch v-model="editForm.sync_files" label="Lưu trữ file/ảnh từ cuộc chat" color="primary" density="compact" hint="Tải và lưu file, ảnh từ cuộc chat lên server." persistent-hint />
         <v-card-actions class="mt-4 px-0">
@@ -195,6 +213,7 @@ import { useI18n } from 'vue-i18n'
 import { useChannelStore } from '../stores/channels'
 import { useAuthStore } from '../stores/auth'
 import api from '../api'
+import { channelTypeInfo } from '../composables/channelTypes'
 
 const route = useRoute()
 const router = useRouter()
@@ -304,6 +323,30 @@ async function createFacebook() {
   }
 }
 
+async function createPancake() {
+  creating.value = true
+  try {
+    await channelStore.createChannel(tenantId.value, {
+      channel_type: 'pancake',
+      name: newChannel.name,
+      credentials: {
+        page_id: newChannel.creds.page_id.trim(),
+        page_access_token: newChannel.creds.page_access_token.trim(),
+      },
+      metadata: JSON.stringify({ sync_files: newChannel.sync_files, sync_interval: newChannel.sync_interval }),
+    })
+    showDialog.value = false
+    newChannel.name = ''
+    newChannel.creds = {}
+    showSnack(t('success'), 'success')
+    await channelStore.fetchChannels(tenantId.value)
+  } catch (e: any) {
+    const code = e?.response?.data?.error
+    showSnack(code === 'pancake_connection_failed' ? t('pancake_connection_failed') : t('error'), 'error')
+  } finally {
+    creating.value = false
+  }
+}
 
 async function syncNow(channelId: string) {
   syncing.value = channelId

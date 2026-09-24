@@ -85,11 +85,11 @@
         <v-card class="pa-4">
           <div class="d-flex justify-space-between align-center">
             <div>
-              <div class="text-body-2 text-grey">{{ ch.channel_type === 'facebook' ? 'Facebook' : 'Zalo OA' }}</div>
+              <div class="text-body-2 text-grey">{{ channelTypeInfo(ch.channel_type).label }}</div>
               <div class="text-h5 font-weight-bold mt-1">{{ ch.count }}</div>
             </div>
-            <v-icon :color="ch.channel_type === 'facebook' ? 'blue' : 'green'" size="32" class="opacity-50">
-              {{ ch.channel_type === 'facebook' ? 'mdi-facebook-messenger' : 'mdi-chat' }}
+            <v-icon :color="channelTypeInfo(ch.channel_type).color" size="32" class="opacity-50">
+              {{ channelTypeInfo(ch.channel_type).icon }}
             </v-icon>
           </div>
         </v-card>
@@ -247,6 +247,7 @@
 </template>
 
 <script setup lang="ts">
+import { channelTypeInfo } from '../composables/channelTypes'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Line } from 'vue-chartjs'

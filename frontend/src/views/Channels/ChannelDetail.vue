@@ -29,8 +29,8 @@
       <v-row>
         <v-col cols="6" sm="3">
           <div class="text-caption text-grey">Loại kênh</div>
-          <v-chip size="small" :color="channel.channel_type === 'facebook' ? 'blue' : 'green'" variant="tonal">
-            {{ channel.channel_type === 'facebook' ? 'Facebook' : 'Zalo OA' }}
+          <v-chip size="small" :color="channelTypeInfo(channel.channel_type).color" variant="tonal">
+            {{ channelTypeInfo(channel.channel_type).label }}
           </v-chip>
         </v-col>
         <v-col cols="6" sm="3">
@@ -169,6 +169,7 @@
 </template>
 
 <script setup lang="ts">
+import { channelTypeInfo } from '../../composables/channelTypes'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useChannelStore } from '../../stores/channels'

@@ -12,8 +12,8 @@
         </template>
         <v-list-item-title>{{ ch.name }}</v-list-item-title>
         <v-list-item-subtitle>
-          <v-chip size="x-small" :color="ch.channel_type === 'zalo_oa' ? 'blue' : 'indigo'" variant="tonal" class="mr-1">
-            {{ ch.channel_type === 'zalo_oa' ? 'Zalo OA' : 'Facebook' }}
+          <v-chip size="x-small" :color="channelTypeInfo(ch.channel_type).color" variant="tonal" class="mr-1">
+            {{ channelTypeInfo(ch.channel_type).label }}
           </v-chip>
           <v-chip size="x-small" :color="ch.is_active ? 'success' : 'grey'" variant="tonal">
             {{ ch.is_active ? $t('active') : $t('inactive') }}
@@ -25,6 +25,7 @@
 </template>
 
 <script setup lang="ts">
+import { channelTypeInfo } from '../../composables/channelTypes'
 import { onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
