@@ -105,7 +105,7 @@
             Hướng dẫn kết nối Pancake
           </v-btn>
           <v-text-field v-model="newChannel.creds.page_id" :label="$t('pancake_page_id')" density="compact" class="mb-2" hint="ID của page trong Pancake" persistent-hint />
-          <v-text-field v-model="newChannel.creds.page_access_token" :label="$t('pancake_page_token')" type="password" density="compact" class="mb-2" hint="Pancake: Cài đặt page → Công cụ (cần quyền admin page)" persistent-hint />
+          <v-text-field v-model="newChannel.creds.page_access_token" :label="$t('pancake_page_token')" type="password" density="compact" class="mb-2" hint="Pancake: Cài đặt → Công cụ → Public API access token" persistent-hint />
         </template>
 
         <!-- Facebook -->

@@ -7,20 +7,23 @@ Mỗi kênh Pancake trong CQA ứng với **một page** trong Pancake. Có nhi�
 ## Yêu cầu
 
 - Page đã được kết nối và kích hoạt trong Pancake
-- Tài khoản Pancake của bạn phải là **admin của page**. Chỉ admin mới thấy và tạo được Page Access Token
+- Tài khoản Pancake của bạn phải là **admin của page**. Chỉ admin mới thấy và tạo được token (Pancake gọi là **Public API access token**)
 
 ## Bước 1: Lấy Page ID và Page Access Token
 
 1. Đăng nhập [pancake.vn](https://pancake.vn), mở page cần kết nối.
-2. Vào **Cài đặt** của page → **Công cụ**.
-3. Copy **Page Access Token**. Nếu chưa có token, bấm tạo mới.
+2. Vào **Cài đặt** (thanh trên cùng) → **Công cụ** (cột trái).
+3. Kéo xuống mục **Public API access token**. Nếu ô còn trống, bấm **Tạo Token**. Sau đó bấm **Sao chép** để copy token.
+
+![Mục Public API access token trong Cài đặt → Công cụ của Pancake](/screenshots/pancake/pancake-public-api-token.webp)
+
 4. **Page ID** là ID của page trên nền tảng gốc, dạng một dãy số. Với page Facebook: mở trang trên Facebook → **Giới thiệu** → **Minh bạch về Trang**, dòng **ID Trang**.
 
 ::: warning Giữ kín Page Access Token
 Token này đọc được toàn bộ hội thoại và gửi được tin nhắn thay page. Không chia sẻ token qua chat hay dán lên nơi công khai. CQA mã hoá token trước khi lưu và chỉ dùng token để đọc tin nhắn.
 :::
 
-Page Access Token **không hết hạn**. Token chỉ mất hiệu lực khi admin tạo token mới trong Pancake — khi đó cần xoá kênh trong CQA và kết nối lại bằng token mới.
+Page Access Token **không hết hạn**. Token chỉ mất hiệu lực khi admin bấm **Tạo Token** lần nữa hoặc **Xoá token** trong Pancake — khi đó cần xoá kênh trong CQA và kết nối lại bằng token mới. Đang có token rồi thì chỉ cần **Sao chép**, đừng bấm Tạo Token.
 
 ## Bước 2: Tạo kênh trong CQA
 
@@ -56,7 +59,7 @@ Tạo xong, kênh hiện trong danh sách **Kênh chat** với nhãn **Pancake**
 
 ## Xử lý sự cố
 
-### Không thấy mục Page Access Token
+### Không thấy mục Public API access token
 
 Tài khoản của bạn chưa phải admin của page trong Pancake. Với page Facebook:
 
