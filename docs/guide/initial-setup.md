@@ -47,7 +47,7 @@ Bấm **Lưu cấu hình**.
 
 Vào menu **Cài đặt** > tab **Cấu hình AI**:
 
-1. **Chọn AI Provider**: Claude (Anthropic) hoặc Gemini (Google)
+1. **Chọn AI Provider**: Claude (Anthropic), Gemini (Google), ChatGPT (OpenAI) hoặc Grok (xAI)
 2. **Chọn Model**:
    - Claude: Sonnet 4.6 (khuyến nghị), Haiku 4.5 (rẻ), Opus 4 (mạnh nhất)
    - Gemini: Flash 2.0 (rẻ), Pro 2.5 (mạnh)

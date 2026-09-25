@@ -3,7 +3,7 @@
 [![Docker Hub](https://img.shields.io/docker/v/buitanviet/chat-quality-agent?label=Docker%20Hub&sort=semver)](https://hub.docker.com/r/buitanviet/chat-quality-agent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Hệ thống phân tích chất lượng chăm sóc khách hàng bằng AI. Tự động đồng bộ tin nhắn từ Zalo OA, Facebook Messenger, Pancake, dùng AI (Claude/Gemini) đánh giá chất lượng CSKH và gửi cảnh báo qua Telegram/Email.
+Hệ thống phân tích chất lượng chăm sóc khách hàng bằng AI. Tự động đồng bộ tin nhắn từ Zalo OA, Facebook Messenger, Pancake, dùng AI (Claude, Gemini, ChatGPT, Grok) đánh giá chất lượng CSKH và gửi cảnh báo qua Telegram/Email.
 
 📖 **Hướng dẫn sử dụng chi tiết: [https://tanviet12.github.io/chat-quality-agent/](https://tanviet12.github.io/chat-quality-agent/)**
 
@@ -12,7 +12,7 @@ Hệ thống phân tích chất lượng chăm sóc khách hàng bằng AI. Tự
 ## Tính năng
 
 - **Đồng bộ tin nhắn** từ Zalo OA, Facebook Messenger và Pancake
-- **Đánh giá chất lượng CSKH** bằng AI (Claude hoặc Gemini) — Đạt/Không đạt, điểm 0-100, nhận xét chi tiết
+- **Đánh giá chất lượng CSKH** bằng AI (Claude, Gemini, ChatGPT hoặc Grok) — Đạt/Không đạt, điểm 0-100, nhận xét chi tiết
 - **Phân loại chat** theo chủ đề tùy chỉnh (khiếu nại, góp ý, hỏi giá...)
 - **Cảnh báo tự động** qua Telegram và Email
 - **Batch AI mode** — gom nhiều cuộc chat/lần gọi AI, tiết kiệm chi phí
@@ -111,7 +111,7 @@ chat-quality-agent/
 
 1. **Kết nối kênh chat**: Cài đặt > Kênh chat > Kết nối Facebook/Zalo
 2. **Đồng bộ tin nhắn**: Bấm "Đồng bộ ngay" hoặc chờ tự động
-3. **Cấu hình AI**: Cài đặt > AI > Chọn Claude/Gemini + nhập API key
+3. **Cấu hình AI**: Cài đặt > AI > Chọn nhà cung cấp AI (Claude, Gemini, ChatGPT, Grok) + nhập API key
 4. **Tạo công việc**: Công việc > Tạo mới > Wizard 6 bước
 5. **Chạy phân tích**: Chi tiết công việc > Chạy thử hoặc Chạy ngay
 6. **Xem kết quả**: Chi tiết công việc > Kết quả đánh giá

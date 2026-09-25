@@ -4,7 +4,7 @@
 
 ## Vấn đề CQA giải quyết
 
-Khi doanh nghiệp có nhiều kênh chat (Zalo OA, Facebook Messenger), việc kiểm tra chất lượng CSKH thủ công tốn nhiều thời gian và dễ bỏ sót. CQA tự động hóa quy trình này:
+Khi doanh nghiệp có nhiều kênh chat (Zalo OA, Facebook Messenger, Pancake), việc kiểm tra chất lượng CSKH thủ công tốn nhiều thời gian và dễ bỏ sót. CQA tự động hóa quy trình này:
 
 - **Đọc hết mọi cuộc chat** — Đồng bộ tự động từ Zalo OA, Facebook Messenger và Pancake
 - **Đánh giá bằng AI** — AI đọc cuộc chat, chấm điểm 0-100, phát hiện vi phạm theo quy định CSKH của bạn
@@ -30,27 +30,22 @@ Khi doanh nghiệp có nhiều kênh chat (Zalo OA, Facebook Messenger), việc 
 ## Kiến trúc hệ thống
 
 ```
-+-----------+     +-----------+
-| Zalo OA   |---->|           |     +----------+
-+-----------+     |  CQA App  |---->| MySQL DB |
-+-----------+     |  (Go)     |     +----------+
-| Facebook  |---->|           |
-+-----------+     +-----+-----+
-                        |
-                  +-----+-----+
-                  |   Nginx   |
-                  | (SSL/Proxy)|
-                  +-----------+
-                        |
-              +---------+---------+
-              |                   |
-        +-----+-----+     +------+------+
-        | Claude AI  |     | Gemini AI   |
-        +-----+-----+     +------+------+
-              |                   |
-        +-----+-----+     +------+------+
-        | Telegram   |     | Email SMTP  |
-        +-----------+     +-------------+
+                  Người dùng (trình duyệt)
+                            |
+                     +------+------+
+                     |    Nginx    |
+                     | (SSL/Proxy) |
+                     +------+------+
+                            |
++-----------+       +-------+-----+       +----------+
+| Zalo OA   |------>|             |------>| MySQL DB |
++-----------+       |             |       +----------+
++-----------+       |   CQA App   |
+| Facebook  |------>|    (Go)     |------> AI: Claude, Gemini, ChatGPT,
++-----------+       |             |        Grok, API tương thích OpenAI
++-----------+       |             |
+| Pancake   |------>|             |------> Thông báo: Telegram, Email
++-----------+       +-------------+
 ```
 
 ## Yêu cầu hệ thống
@@ -59,7 +54,7 @@ Khi doanh nghiệp có nhiều kênh chat (Zalo OA, Facebook Messenger), việc 
 - **RAM**: Tối thiểu 1GB (khuyến nghị 2GB)
 - **Disk**: Tối thiểu 10GB
 - **Docker**: Docker Engine 20+ và Docker Compose v2
-- **AI API Key**: Claude (Anthropic) hoặc Gemini (Google) — cần ít nhất 1 key
+- **AI API Key**: Claude (Anthropic), Gemini (Google), ChatGPT (OpenAI) hoặc Grok (xAI) — cần ít nhất 1 key. Dùng được cả API tương thích chuẩn OpenAI như OpenRouter, LiteLLM
 
 ## Bước tiếp theo
 
