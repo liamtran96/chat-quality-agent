@@ -1,6 +1,6 @@
 # Giới thiệu
 
-**Chat Quality Agent (CQA)** la he thong ma nguon mo giup doanh nghiep tu dong phan tich chat luong cham soc khach hang (CSKH) qua cac kenh chat.
+**Chat Quality Agent (CQA)** là hệ thống mã nguồn mở giúp doanh nghiệp tự động phân tích chất lượng chăm sóc khách hàng (CSKH) qua các kênh chat.
 
 ## Vấn đề CQA giải quyết
 
